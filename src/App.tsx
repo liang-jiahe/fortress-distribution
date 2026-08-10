@@ -183,7 +183,7 @@ type SharedStateRow = { id: string; members: Member[]; queues: Record<AccessoryN
 
 export default function App() {
   const [members, setMembers] = useState<Member[]>(() => { try { const saved = localStorage.getItem('fortress-members'); return saved ? JSON.parse(saved).map((member: Member) => ({ ...member, weeklyPower: member.weeklyPower || 0 })) : [] } catch { return [] } })
-  const [contest, setContest] = useState(false); const [search, setSearch] = useState(''); const [notice, setNotice] = useState('已加载示例数据，可直接编辑或导入本周表格。'); const [activeSection, setActiveSection] = useState('matrix'); const fileRef = useRef<HTMLInputElement>(null)
+  const [contest, setContest] = useState(false); const [notice, setNotice] = useState('已加载示例数据，可直接编辑或导入本周表格。'); const [activeSection, setActiveSection] = useState('matrix'); const fileRef = useRef<HTMLInputElement>(null)
   const [queues, setQueues] = useState<Record<AccessoryName, QueueEntry[]>>(() => { try { const saved = localStorage.getItem('fortress-accessory-queues'); return saved ? { ...emptyQueues(), ...JSON.parse(saved) } : emptyQueues() } catch { return emptyQueues() } })
   const [queueInputs, setQueueInputs] = useState<Record<AccessoryName, string>>(() => ({ 手镯: '', 戒指: '', 耳环: '', 腰带: '', 项链: '', 徽章: '' }))
   const [lastSweep, setLastSweep] = useState(() => localStorage.getItem('fortress-accessory-last-sweep') || '')
@@ -250,8 +250,9 @@ export default function App() {
   const addMember = () => { const index = members.length + 1; setMembers((current) => [...current, { id: `m-${Date.now()}`, name: `新成员${index}`, power: 0, weeklyPower: 0, score: null, remark: '', order: current.length }]); setNotice('已新增成员，请填写姓名、战力和考核分。') }
   const removeMember = (id: string) => { setMembers((current) => current.filter((member) => member.id !== id)); setNotice('成员已删除，排名和矩阵已更新。') }
   const calculateWeeklyPower = () => { setMembers((current) => current.map((member) => ({ ...member, weeklyPower: 0 }))); setNotice('已更新战力：本周战力已转为上周战力，提升已归零。') }
-  const visiblePowerMembers = powerRanked.filter((member) => member.name.toLowerCase().includes(search.toLowerCase()))
-  const visibleScoreMembers = ranked.filter((member) => member.name.toLowerCase().includes(search.toLowerCase()))
+  const resetScores = () => { setMembers((current) => current.map((member) => ({ ...member, score: 36 }))); setNotice('考核分数已全部重置为 36。') }
+  const visiblePowerMembers = powerRanked
+  const visibleScoreMembers = ranked
   const clear = () => { setMembers([]); setNotice('已清空成员数据。') }
   const reset = () => { setNotice('示例数据已停用，系统会一直保留最新战力。') }
   const addQueueEntry = (accessory: AccessoryName) => { const name = queueInputs[accessory].trim(); if (!name) { setNotice(`请先填写想要${accessory}的姓名。`); return } if (queues[accessory].some((entry) => entry.name.trim().toLowerCase() === name.toLowerCase())) { setNotice(`${name} 已经在${accessory}队列中。`); return } setQueues((current) => ({ ...current, [accessory]: [...current[accessory], { id: `q-${Date.now()}-${accessory}`, name, addedAt: new Date().toISOString() }] })); setQueueInputs((current) => ({ ...current, [accessory]: '' })); setNotice(`${name} 已加入${accessory}排队。`) }
@@ -275,7 +276,6 @@ export default function App() {
             <h3>战力排行与考核分数</h3>
           </div>
           <div className="row-actions">
-            <input className="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="搜索姓名" />
             <button className="btn primary" onClick={addMember}>＋ 新增成员</button>
             <button className="btn ghost" onClick={reset}>恢复示例</button>
             <button className="btn danger" onClick={clear}>清空</button>
@@ -316,8 +316,8 @@ export default function App() {
                         <td><span className="rank-pill">{powerRank || '—'}</span></td>
                         <td><input value={member.name} onChange={(e) => updateMember(member.id, { name: e.target.value })} /></td>
                         <td>{previousPower}</td>
-                        <td><input type="number" value={currentPower} onChange={(e) => updateMember(member.id, { power: Number(e.target.value) || 0 })} /></td>
-                        <td><input type="number" value={growth} onChange={(e) => updateMember(member.id, { weeklyPower: Number(e.target.value) || 0 })} /></td>
+                        <td><input type="number" value={currentPower || ''} onChange={(e) => updateMember(member.id, { power: e.target.value === '' ? 0 : Number(e.target.value) })} /></td>
+                        <td><input type="number" value={growth || ''} onChange={(e) => updateMember(member.id, { weeklyPower: e.target.value === '' ? 0 : Number(e.target.value) })} /></td>
                         <td><button className="icon-btn" title="删除成员" onClick={() => removeMember(member.id)}>×</button></td>
                       </tr>
                     )
@@ -346,7 +346,10 @@ export default function App() {
                 <span className="eyebrow">SCORE RANKING</span>
                 <h4>考核分数表</h4>
               </div>
-              <small>分数相同按战力排序</small>
+              <div className="table-heading-actions">
+                <small>分数相同按战力排序</small>
+                <button className="btn ghost" onClick={resetScores}>重置分数</button>
+              </div>
             </div>
             <div className="table-wrap">
               <table>
@@ -368,7 +371,7 @@ export default function App() {
                       <tr key={member.id}>
                         <td><span className="rank-pill">{scoreRank || '—'}</span></td>
                         <td><input value={member.name} onChange={(e) => updateMember(member.id, { name: e.target.value })} /></td>
-                        <td><input type="number" min="0" max={scoreMax} value={member.score ?? ''} placeholder="未填" onChange={(e) => updateMember(member.id, { score: e.target.value === '' ? null : Number(e.target.value) })} /></td>
+                        <td><input type="number" min="0" max={scoreMax} value={member.score || ''} placeholder="0" onChange={(e) => updateMember(member.id, { score: e.target.value === '' ? 0 : Number(e.target.value) })} /></td>
                         <td><span className="rank-pill">{powerRank || '—'}</span></td>
                         <td>{member.power || 0}</td>
                         <td><button className="icon-btn" title="删除成员" onClick={() => removeMember(member.id)}>×</button></td>
