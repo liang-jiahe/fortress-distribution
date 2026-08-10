@@ -8,11 +8,12 @@ button, input, select { font: inherit; }
 .sidebar { width: 240px; flex: 0 0 240px; padding: 28px 20px; border-right: 2px dashed #bec9c2; background: rgba(255,255,255,.84); position: sticky; top: 0; height: 100vh; }
 .brand-mark { font-size: 36px; width: 64px; height: 64px; display:grid; place-items:center; background:#a6f2cf; border:2px solid #1b6b4f; border-radius: 22px 12px 24px 14px; transform:rotate(-6deg); box-shadow:4px 4px 0 rgba(27,107,79,.14); }
 .sidebar h1 { margin: 20px 0 3px; font: 700 30px Caveat, cursive; color: #1b6b4f; }
+.sidebar h1::after { content:'署名 · 繁星'; display:block; margin-top:6px; color:#8f4953; font:600 14px Quicksand, "Microsoft YaHei", sans-serif; letter-spacing:.12em; }
 .sidebar p { margin:0 0 28px; color:#6f7973; font-size:13px; }
 .sidebar nav { display:grid; gap:8px; }
 .sidebar nav button { width:100%; padding: 12px 14px; color:#52615a; border:1px dashed transparent; border-radius: 15px; font-weight:600; background:transparent; text-align:left; cursor:pointer; transition:.2s; }
 .sidebar nav button.active, .sidebar nav button:hover { color:#00513a; background:#a7f3d0; border-color:#1b6b4f; transform:rotate(-1deg); }
-.sidebar-note { position:absolute; bottom:28px; color:#8a938e; font-size:12px; line-height:1.7; }
+.sidebar-note { display:none; }
 .content { flex:1; min-width:0; padding: 0 34px 72px; max-width: 1600px; margin:0 auto; width:100%; display:flex; flex-direction:column; }
 .topbar { order:1; }.notice { order:2; }.stats { order:3; }#members { order:4; }#matrix { order:5; }#accessories { order:6; }#instructions { order:7; }.signature { order:8; }
 .topbar { display:flex; justify-content:space-between; align-items:center; gap:20px; padding:28px 0 20px; border-bottom:2px dashed #bec9c2; }
@@ -24,6 +25,7 @@ button, input, select { font: inherit; }
 .btn:hover { transform:translateY(-2px) rotate(-1deg); box-shadow:4px 4px 0 rgba(111,121,115,.16); }
 .btn.primary { background:#1b6b4f; color:#fff; border-color:#00513a; }
 .btn.secondary { background:#fff; }
+.toolbar .btn.secondary { display:none; }
 .btn.ghost { background:#f6f6f2; }
 .btn.danger { color:#ba1a1a; border-color:#f0aaaa; background:#fff4f3; }
 .notice { margin:18px 0; padding:13px 16px; background:#fff; border:1px solid #d7dfda; border-left:5px solid #1b6b4f; border-radius:12px; color:#52615a; display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap; }
@@ -57,7 +59,7 @@ button, input, select { font: inherit; }
 .protocol-copy { flex:1 1 360px; color:#52615a; font-size:13px; line-height:1.8; }
 .protocol-copy p { margin:0 0 6px; }
 .protocol-copy ul { margin:0; padding-left:20px; }
-.signature { text-align:center; color:#1b6b4f; font:600 20px Caveat, "Microsoft YaHei", cursive; letter-spacing:.08em; padding:0 0 28px; }
+.signature { display:none; }
 .cat-sticker { position:fixed; z-index:0; pointer-events:none; user-select:none; filter:drop-shadow(2px 5px 3px rgba(63,73,67,.16)); opacity:.78; }
 .cat-art { width:170px; height:180px; background-size:300% 100%; background-repeat:no-repeat; }
 .sticker-cat { right:24px; bottom:14px; background-position:left center; transform:rotate(5deg); }
