@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+﻿import { useEffect, useMemo, useRef, useState } from 'react'
 import ExcelJS from 'exceljs'
 import catStickerSheet from './assets/cat-sticker-sheet.png'
 import { supabase } from './supabase'
@@ -175,7 +175,6 @@ async function exportWorkbook(members: Member[], schedule: Schedule, ranked: Mem
   sheet.mergeCells('A24:L24'); sheet.getCell('A24').value = '特殊情况：扣包/或特殊情况奖励包'; sheet.getCell('A24').alignment = center; sheet.getCell('A24').border = border
   ranked.slice(0, 30).forEach((member, index) => { const row = index + 3; const rankCell = sheet.getCell(row, 13); rankCell.value = index + 1; rankCell.alignment = center; rankCell.border = border; rankCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `FF${colorHex(tierForRank(index + 1).color)}` } }; [member.name, member.score ?? '', member.remark].forEach((value, i) => { const cell = sheet.getCell(row, 14 + i); cell.value = value; cell.alignment = center; cell.border = border; cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `FF${colorHex(tierForRank(index + 1).color)}` } } }) })
   sheet.mergeCells('A26:L26'); sheet.getCell('A26').value = '战力、考核分排名每周六晚统计，每周更新'; sheet.getCell('A26').alignment = center
-  sheet.mergeCells('A28:P28'); sheet.getCell('A28').value = '署名：繁星'; sheet.getCell('A28').alignment = center; sheet.getCell('A28').font = { name: '楷体', size: 12, italic: true, color: { argb: 'FF1B6B4F' } }
   const buffer = await workbook.xlsx.writeBuffer(); const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = '繁星本周要塞包分配.xlsx'; link.click(); URL.revokeObjectURL(url)
 }
 
@@ -240,7 +239,9 @@ export default function App() {
     return () => window.clearTimeout(timer)
   }, [members, queues, lastSweep, contest, cloudReady, cloudStateExists])
   const ranked = useMemo(() => rankMembers(members), [members]); const powerRanked = useMemo(() => powerRankMembers(members), [members]); const schedule = useMemo(() => buildAutoSchedule(ranked), [ranked]); const scoreMax = contest ? 57 : 37
-  const weeklyPowerTotal = useMemo(() => members.reduce((total, member) => total + (member.weeklyPower || 0), 0), [members])
+  const weeklyPowerTotal = useMemo(() => members.reduce((total, member) => total + Math.max((member.power || 0) - (member.weeklyPower || 0), 0), 0), [members])
+  const powerTotal = useMemo(() => members.reduce((total, member) => total + (member.power || 0), 0), [members])
+  const previousPowerTotal = useMemo(() => members.reduce((total, member) => total + (member.weeklyPower || 0), 0), [members])
   const counts = useMemo(() => { const result = new Map<string, { fire: number; middle: number }>(); Object.entries(schedule).forEach(([key, id]) => { if (!id) return; const type = key.split(':')[1] as PackageType; const current = result.get(id) ?? { fire: 0, middle: 0 }; if (type === 'fire') current.fire += 1; else current.middle += 1; result.set(id, current) }); return result }, [schedule])
   useEffect(() => { localStorage.setItem('fortress-members', JSON.stringify(members)) }, [members])
   useEffect(() => { localStorage.setItem('fortress-accessory-queues', JSON.stringify(queues)) }, [queues])
@@ -249,7 +250,8 @@ export default function App() {
   const addMember = () => { const index = members.length + 1; setMembers((current) => [...current, { id: `m-${Date.now()}`, name: `新成员${index}`, power: 0, weeklyPower: 0, score: null, remark: '', order: current.length }]); setNotice('已新增成员，请填写姓名、战力和考核分。') }
   const removeMember = (id: string) => { setMembers((current) => current.filter((member) => member.id !== id)); setNotice('成员已删除，排名和矩阵已更新。') }
   const calculateWeeklyPower = () => { const increase = weeklyPowerTotal; setMembers((current) => { const next = current.map((member) => ({ ...member, power: member.power + (member.weeklyPower || 0), weeklyPower: 0 })); localStorage.setItem('fortress-members', JSON.stringify(next)); return next }); setNotice(`本周战力已完成计算并永久保存，总计增加 ${increase} 万。`) }
-  const visibleMembers = powerRanked.filter((member) => member.name.toLowerCase().includes(search.toLowerCase()))
+  const visiblePowerMembers = powerRanked.filter((member) => member.name.toLowerCase().includes(search.toLowerCase()))
+  const visibleScoreMembers = ranked.filter((member) => member.name.toLowerCase().includes(search.toLowerCase()))
   const clear = () => { setMembers([]); setNotice('已清空成员数据。') }
   const reset = () => { setNotice('示例数据已停用，系统会一直保留最新战力。') }
   const addQueueEntry = (accessory: AccessoryName) => { const name = queueInputs[accessory].trim(); if (!name) { setNotice(`请先填写想要${accessory}的姓名。`); return } if (queues[accessory].some((entry) => entry.name.trim().toLowerCase() === name.toLowerCase())) { setNotice(`${name} 已经在${accessory}队列中。`); return } setQueues((current) => ({ ...current, [accessory]: [...current[accessory], { id: `q-${Date.now()}-${accessory}`, name, addedAt: new Date().toISOString() }] })); setQueueInputs((current) => ({ ...current, [accessory]: '' })); setNotice(`${name} 已加入${accessory}排队。`) }
@@ -265,8 +267,118 @@ export default function App() {
       <section className="notice">{notice}<span className="notice-right"><label className="toggle"><input type="checkbox" checked={contest} onChange={(e) => setContest(e.target.checked)} /><span></span> 争霸周（最高 {scoreMax} 分）</label></span></section>
       <section className="stats"><div className="stat-card"><span>成员人数</span><strong>{members.length}</strong><small>{members.length === 30 ? '模板完整' : '目标 30 人'}</small></div><div className="stat-card"><span>当前最高分</span><strong>{ranked[0]?.score ?? '—'}</strong><small>普通周 37 · 争霸周 57</small></div><div className="stat-card"><span>本周提升</span><strong>{weeklyPowerTotal}</strong><small>输入后点击“计算完成”</small></div><div className="stat-card"><span>火/中包总量</span><strong>40 / 80</strong><small>8 个时段完整分配</small></div></section>
       <section id="matrix" className="panel matrix-panel"><div className="panel-heading"><div><span className="eyebrow">AUTO LAYOUT</span><h3>彩色分包矩阵</h3></div><button className="btn ghost" onClick={() => setNotice('矩阵会根据当前考核分排名自动生成。')}>↻ 重新生成矩阵</button></div><div className="matrix-scroll"><div className="matrix-grid">{SESSIONS.map((session) => <SessionBlock key={session.id} session={session} schedule={schedule} ranked={ranked} members={members} />)}</div></div><div className="legend">{TIERS.map((tier) => <span key={tier.min}><i className={`swatch ${tier.color}`}></i>{tier.min}-{tier.max} 名</span>)}</div></section>
-      <section id="members" className="panel"><span id="ranking" className="anchor-target"></span><div className="panel-heading"><div><span className="eyebrow">MEMBER ROSTER</span><h3>成员与考核分</h3></div><div className="row-actions"><input className="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="搜索姓名" /><button className="btn primary" onClick={addMember}>＋ 新增成员</button><button className="btn ghost" onClick={calculateWeeklyPower}>✓ 计算完成</button><button className="btn ghost" onClick={reset}>恢复示例</button><button className="btn danger" onClick={clear}>清空</button></div></div><div className="table-wrap"><table><thead><tr><th>战力排名</th><th>成员姓名</th><th>总战力</th><th>本周提升</th><th>分包排名</th><th>考核分</th><th>火/中包</th><th>币数</th><th>备注</th><th></th></tr></thead><tbody>{visibleMembers.map((member) => { const powerRank = powerRanked.findIndex((entry) => entry.id === member.id) + 1; const packageRank = ranked.findIndex((entry) => entry.id === member.id) + 1; const tier = packageRank ? tierForRank(packageRank) : TIERS[0]; const count = counts.get(member.id) ?? { fire: 0, middle: 0 }; return <tr key={member.id}><td><span className="rank-pill">{powerRank || '—'}</span></td><td><input value={member.name} onChange={(e) => updateMember(member.id, { name: e.target.value })} /></td><td><input type="number" value={member.power} onChange={(e) => updateMember(member.id, { power: Number(e.target.value) || 0 })} /></td><td><input className="weekly-power" type="number" min="0" value={member.weeklyPower || ''} placeholder="+万" onChange={(e) => updateMember(member.id, { weeklyPower: Number(e.target.value) || 0 })} /></td><td><span className={`tier-dot ${tier.color}`}>{packageRank || '—'}</span></td><td><input type="number" min="0" max={scoreMax} value={member.score ?? ''} placeholder="未填" onChange={(e) => updateMember(member.id, { score: e.target.value === '' ? null : Number(e.target.value) })} /></td><td>{count.fire} 火 / {count.middle} 中</td><td>{packageRank ? tier.coins : '—'}</td><td><input value={member.remark} onChange={(e) => updateMember(member.id, { remark: e.target.value })} placeholder="备注" /></td><td><button className="icon-btn" title="删除成员" onClick={() => removeMember(member.id)}>×</button></td></tr> })}</tbody></table>{visibleMembers.length === 0 && <div className="empty">没有匹配的成员，点击“新增成员”开始。</div>}</div></section>
-      <section id="instructions" className="panel rules-panel"><div><span className="eyebrow">PACKAGE RULES</span><h3>分包规则</h3></div><div className="protocol-copy"><p>每周六晚统计一次战力与考核分，按时参加活动基本不会扣包。</p><ul><li>考核分越高，分包排名越靠前；同分时战力高者优先。</li><li>普通周满分 37 分；争霸周满分 57 分。</li><li>每周固定 8 个时段，共 40 个火包和 80 个中包。</li><li>1–5 名领取 2 火 3 中，26–30 名领取 5 中，其余档位按卡片执行。</li><li>特殊奖励或扣包请在备注里写清楚。</li></ul></div><div className="tier-cards">{TIERS.map((tier) => <div className={`tier-card ${tier.color}`} key={tier.min}><b>{tier.min}-{tier.max}</b><span>{tier.fire} 火 · {tier.middle} 中</span><strong>{tier.coins} 币</strong></div>)}</div><p className="rule-copy">本规则以互相提醒、按时参加、公开透明为原则。</p></section>
+      <section id="members" className="panel split-panel">
+        <span id="ranking" className="anchor-target"></span>
+        <div className="panel-heading">
+          <div>
+            <span className="eyebrow">MEMBER ROSTER</span>
+            <h3>战力排行与考核分数</h3>
+          </div>
+          <div className="row-actions">
+            <input className="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="搜索姓名" />
+            <button className="btn primary" onClick={addMember}>＋ 新增成员</button>
+            <button className="btn ghost" onClick={reset}>恢复示例</button>
+            <button className="btn danger" onClick={clear}>清空</button>
+          </div>
+        </div>
+        <div className="split-tables">
+          <div>
+            <div className="table-heading">
+              <div>
+                <span className="eyebrow">POWER RANKING</span>
+                <h4>战力排行表</h4>
+              </div>
+              <small>按本周战力排序</small>
+            </div>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>战力排名</th>
+                    <th>成员姓名</th>
+                    <th>本周战力</th>
+                    <th>上周战力</th>
+                    <th>提升</th>
+                    <th>备注</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visiblePowerMembers.map((member) => {
+                    const powerRank = powerRanked.findIndex((entry) => entry.id === member.id) + 1
+                    const currentPower = member.power || 0
+                    const previousPower = member.weeklyPower || 0
+                    const growth = Math.max(currentPower - previousPower, 0)
+                    return (
+                      <tr key={member.id}>
+                        <td><span className="rank-pill">{powerRank || '—'}</span></td>
+                        <td><input value={member.name} onChange={(e) => updateMember(member.id, { name: e.target.value })} /></td>
+                        <td><input type="number" value={currentPower} onChange={(e) => updateMember(member.id, { power: Number(e.target.value) || 0 })} /></td>
+                        <td><input type="number" value={previousPower} onChange={(e) => updateMember(member.id, { weeklyPower: Number(e.target.value) || 0 })} /></td>
+                        <td>{growth}</td>
+                        <td><input value={member.remark} onChange={(e) => updateMember(member.id, { remark: e.target.value })} placeholder="备注" /></td>
+                        <td><button className="icon-btn" title="删除成员" onClick={() => removeMember(member.id)}>×</button></td>
+                      </tr>
+                    )
+                  })}
+                  <tr className="summary-row">
+                    <td>合计</td>
+                    <td>全部成员</td>
+                    <td>{powerTotal}</td>
+                    <td>{previousPowerTotal}</td>
+                    <td>{weeklyPowerTotal}</td>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                </tbody>
+              </table>
+              {visiblePowerMembers.length === 0 && <div className="empty">没有匹配的成员，先添加一名试试。</div>}
+            </div>
+          </div>
+          <div>
+            <div className="table-heading">
+              <div>
+                <span className="eyebrow">SCORE RANKING</span>
+                <h4>考核分数表</h4>
+              </div>
+              <small>分数相同按战力排序</small>
+            </div>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>考核排名</th>
+                    <th>成员姓名</th>
+                    <th>考核分数</th>
+                    <th>战力排名</th>
+                    <th>总战力</th>
+                    <th>备注</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleScoreMembers.map((member) => {
+                    const scoreRank = ranked.findIndex((entry) => entry.id === member.id) + 1
+                    const powerRank = powerRanked.findIndex((entry) => entry.id === member.id) + 1
+                    return (
+                      <tr key={member.id}>
+                        <td><span className="rank-pill">{scoreRank || '—'}</span></td>
+                        <td><input value={member.name} onChange={(e) => updateMember(member.id, { name: e.target.value })} /></td>
+                        <td><input type="number" min="0" max={scoreMax} value={member.score ?? ''} placeholder="未填" onChange={(e) => updateMember(member.id, { score: e.target.value === '' ? null : Number(e.target.value) })} /></td>
+                        <td><span className="rank-pill">{powerRank || '—'}</span></td>
+                        <td>{member.power || 0}</td>
+                        <td><input value={member.remark} onChange={(e) => updateMember(member.id, { remark: e.target.value })} placeholder="备注" /></td>
+                        <td><button className="icon-btn" title="删除成员" onClick={() => removeMember(member.id)}>×</button></td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+              {visibleScoreMembers.length === 0 && <div className="empty">没有匹配的成员，先添加一名试试。</div>}
+            </div>
+          </div>
+        </div>
+      </section>      <section id="instructions" className="panel rules-panel"><div><span className="eyebrow">PACKAGE RULES</span><h3>分包规则</h3></div><div className="protocol-copy"><p>每周六晚统计一次战力与考核分，按时参加活动基本不会扣包。</p><ul><li>考核分越高，分包排名越靠前；同分时战力高者优先。</li><li>普通周满分 37 分；争霸周满分 57 分。</li><li>每周固定 8 个时段，共 40 个火包和 80 个中包。</li><li>1–5 名领取 2 火 3 中，26–30 名领取 5 中，其余档位按卡片执行。</li><li>特殊奖励或扣包请在备注里写清楚。</li></ul></div><div className="tier-cards">{TIERS.map((tier) => <div className={`tier-card ${tier.color}`} key={tier.min}><b>{tier.min}-{tier.max}</b><span>{tier.fire} 火 · {tier.middle} 中</span><strong>{tier.coins} 币</strong></div>)}</div><p className="rule-copy">本规则以互相提醒、按时参加、公开透明为原则。</p></section>
       <section id="accessories" className="panel accessory-panel"><div className="panel-heading"><div><span className="eyebrow">ACCESSORY QUEUE</span><h3>饰品排队</h3></div><button className="btn ghost" onClick={sweepQueuesNow}>↻ 周日发放首位</button></div><p className="accessory-intro">选择需要的饰品并留下姓名。每周日发放每种饰品的第一位，也可以随时手动标记“已分发”。</p><div className="accessory-grid">{ACCESSORIES.map((accessory) => <div className={`accessory-card ${accessory.color}`} key={accessory.name}><div className="accessory-title"><span className="accessory-icon">{accessory.icon}</span><div><strong>{accessory.name}</strong><small>{queues[accessory.name].length} 人排队</small></div></div><div className="queue-add"><input value={queueInputs[accessory.name]} onChange={(event) => setQueueInputs((current) => ({ ...current, [accessory.name]: event.target.value }))} onKeyDown={(event) => { if (event.key === 'Enter') addQueueEntry(accessory.name) }} placeholder="输入姓名" /><button className="cat-add" onClick={() => addQueueEntry(accessory.name)}>＋</button></div>{queues[accessory.name].length ? <ol className="queue-list">{queues[accessory.name].map((entry, index) => <li key={entry.id}><span className="queue-number">{index + 1}</span><span className="queue-name">{entry.name}</span><button onClick={() => removeQueueEntry(accessory.name, entry.id)}>已分发</button></li>)}</ol> : <div className="queue-empty">暂无排队</div>}</div>)}</div><p className="queue-note">自动规则：每周日打开系统时，每种饰品只会自动发放一次队首；队列数据保存在当前浏览器。</p></section>
       <footer className="signature">署名：繁星</footer>
     </main>
@@ -277,3 +389,4 @@ function SessionBlock({ session, schedule, ranked, members }: { session: Session
   const memberById = new Map(members.map((member) => [member.id, member]))
   return <div className={`session-block ${session.block}`}><div className="session-title">🐾 {session.label}</div><div className="session-types">{TYPE_ORDER.map((type) => { const id = schedule[cellKey(session.id, type, 0)] ?? ''; const member = memberById.get(id); const rank = member ? ranked.findIndex((entry) => entry.id === member.id) + 1 : 0; return <div className={rank ? `header-fill ${tierForRank(rank).color}` : ''} key={type}>{PACKAGE_LABELS[type]}</div> })}</div>{Array.from({ length: 5 }, (_, row) => <div className="session-row" key={row}>{TYPE_ORDER.map((type) => { const id = schedule[cellKey(session.id, type, row)] ?? ''; const member = memberById.get(id); const rank = member ? ranked.findIndex((entry) => entry.id === member.id) + 1 : 0; return <div key={type} className={`matrix-name ${rank ? `rank-fill ${tierForRank(rank).color}` : ''}`}>{member?.name ?? '—'}</div> })}</div>)}</div>
 }
+
