@@ -241,7 +241,7 @@ export default function App() {
   const ranked = useMemo(() => rankMembers(members), [members]); const powerRanked = useMemo(() => powerRankMembers(members), [members]); const schedule = useMemo(() => buildAutoSchedule(ranked), [ranked]); const scoreMax = contest ? 57 : 37
   const weeklyPowerTotal = useMemo(() => members.reduce((total, member) => total + (member.weeklyPower || 0), 0), [members])
   const powerTotal = useMemo(() => members.reduce((total, member) => total + (member.power || 0), 0), [members])
-  const previousPowerTotal = useMemo(() => members.reduce((total, member) => total + (member.weeklyPower || 0), 0), [members])
+  const previousPowerTotal = useMemo(() => members.reduce((total, member) => total + Math.max((member.power || 0) - (member.weeklyPower || 0), 0), 0), [members])
   const counts = useMemo(() => { const result = new Map<string, { fire: number; middle: number }>(); Object.entries(schedule).forEach(([key, id]) => { if (!id) return; const type = key.split(':')[1] as PackageType; const current = result.get(id) ?? { fire: 0, middle: 0 }; if (type === 'fire') current.fire += 1; else current.middle += 1; result.set(id, current) }); return result }, [schedule])
   useEffect(() => { localStorage.setItem('fortress-members', JSON.stringify(members)) }, [members])
   useEffect(() => { localStorage.setItem('fortress-accessory-queues', JSON.stringify(queues)) }, [queues])
@@ -249,7 +249,7 @@ export default function App() {
   const updateMember = (id: string, patch: Partial<Member>) => { setMembers((current) => current.map((member) => member.id === id ? { ...member, ...patch } : member)) }
   const addMember = () => { const index = members.length + 1; setMembers((current) => [...current, { id: `m-${Date.now()}`, name: `新成员${index}`, power: 0, weeklyPower: 0, score: null, remark: '', order: current.length }]); setNotice('已新增成员，请填写姓名、战力和考核分。') }
   const removeMember = (id: string) => { setMembers((current) => current.filter((member) => member.id !== id)); setNotice('成员已删除，排名和矩阵已更新。') }
-  const calculateWeeklyPower = () => { const increase = weeklyPowerTotal; setMembers((current) => { const next = current.map((member) => ({ ...member, power: member.power + (member.weeklyPower || 0), weeklyPower: 0 })); localStorage.setItem('fortress-members', JSON.stringify(next)); return next }); setNotice(`本周战力已完成计算并永久保存，总计增加 ${increase} 万。`) }
+  const calculateWeeklyPower = () => { setMembers((current) => current.map((member) => ({ ...member, weeklyPower: 0 }))); setNotice('已更新战力：本周战力已转为上周战力，提升已归零。') }
   const visiblePowerMembers = powerRanked.filter((member) => member.name.toLowerCase().includes(search.toLowerCase()))
   const visibleScoreMembers = ranked.filter((member) => member.name.toLowerCase().includes(search.toLowerCase()))
   const clear = () => { setMembers([]); setNotice('已清空成员数据。') }
@@ -265,7 +265,7 @@ export default function App() {
     <main className="content">
       <header className="topbar"><div><div className="eyebrow">FORTRESS DISTRIBUTION</div><h2>本周要塞包分配</h2></div><div className="toolbar"><button className="btn secondary" onClick={() => fileRef.current?.click()}>⇧ 导入 XLSX</button><input ref={fileRef} type="file" accept=".xlsx,.xls" hidden onChange={handleImport} /><button className="btn primary" onClick={() => exportWorkbook(members, schedule, ranked)}>⇩ 导出单表 XLSX</button></div></header>
       <section className="notice">{notice}<span className="notice-right"><label className="toggle"><input type="checkbox" checked={contest} onChange={(e) => setContest(e.target.checked)} /><span></span> 争霸周（最高 {scoreMax} 分）</label></span></section>
-      <section className="stats"><div className="stat-card"><span>成员人数</span><strong>{members.length}</strong><small>{members.length === 30 ? '模板完整' : '目标 30 人'}</small></div><div className="stat-card"><span>当前最高分</span><strong>{ranked[0]?.score ?? '—'}</strong><small>普通周 37 · 争霸周 57</small></div><div className="stat-card"><span>本周提升</span><strong>{weeklyPowerTotal}</strong><small>输入后点击“计算完成”</small></div><div className="stat-card"><span>火/中包总量</span><strong>40 / 80</strong><small>8 个时段完整分配</small></div></section>
+      <section className="stats"><div className="stat-card"><span>成员人数</span><strong>{members.length}</strong><small>{members.length === 30 ? '模板完整' : '目标 30 人'}</small></div><div className="stat-card"><span>当前最高分</span><strong>{ranked[0]?.score ?? '—'}</strong><small>普通周 37 · 争霸周 57</small></div><div className="stat-card"><span>本周提升</span><strong>{weeklyPowerTotal}</strong><small>点击右侧“更新战力”</small></div><div className="stat-card"><span>火/中包总量</span><strong>40 / 80</strong><small>8 个时段完整分配</small></div></section>
       <section id="matrix" className="panel matrix-panel"><div className="panel-heading"><div><span className="eyebrow">AUTO LAYOUT</span><h3>彩色分包矩阵</h3></div><button className="btn ghost" onClick={() => setNotice('矩阵会根据当前考核分排名自动生成。')}>↻ 重新生成矩阵</button></div><div className="matrix-scroll"><div className="matrix-grid">{SESSIONS.map((session) => <SessionBlock key={session.id} session={session} schedule={schedule} ranked={ranked} members={members} />)}</div></div><div className="legend">{TIERS.map((tier) => <span key={tier.min}><i className={`swatch ${tier.color}`}></i>{tier.min}-{tier.max} 名</span>)}</div></section>
       <section id="members" className="panel split-panel">
         <span id="ranking" className="anchor-target"></span>
@@ -288,7 +288,10 @@ export default function App() {
                 <span className="eyebrow">POWER RANKING</span>
                 <h4>战力排行表</h4>
               </div>
-              <small>按本周战力排序</small>
+              <div className="table-heading-actions">
+                <small>按本周战力排序</small>
+                <button className="btn ghost" onClick={calculateWeeklyPower}>更新战力</button>
+              </div>
             </div>
             <div className="table-wrap">
               <table>
