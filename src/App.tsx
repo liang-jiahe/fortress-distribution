@@ -312,7 +312,7 @@ export default function App() {
   const goTo = (section: string) => { setActiveSection(section); document.getElementById(section)?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
   return <div className="app-shell">
     <span className="cat-sticker cat-art sticker-cat" style={{ backgroundImage: `url(${catStickerSheet})` }} aria-hidden="true"></span><span className="cat-sticker cat-art sticker-paw" style={{ backgroundImage: `url(${catStickerSheet})` }} aria-hidden="true"></span><span className="cat-sticker cat-art sticker-heart" style={{ backgroundImage: `url(${catStickerSheet})` }} aria-hidden="true"></span>
-    <aside className="sidebar"><div className="brand-mark brand-cat" style={{ backgroundImage: `url(${catStickerSheet})` }}></div><h1>繁星要塞</h1><nav><button className={activeSection === 'matrix' ? 'active' : ''} onClick={() => goTo('matrix')}>▦ 要塞分包</button><button className={activeSection === 'members' ? 'active' : ''} onClick={() => goTo('members')}>♙ 成员管理</button><button className={activeSection === 'ranking' ? 'active' : ''} onClick={() => goTo('members')}>★ 排名与考核</button><button className={activeSection === 'accessories' ? 'active' : ''} onClick={() => goTo('accessories')}>◇ 饰品排队</button><button className={activeSection === 'instructions' ? 'active' : ''} onClick={() => goTo('instructions')}>▤ 使用说明</button></nav><div className="sidebar-note">数据只保存在当前浏览器<br />导入即用，导出即走</div></aside>
+    <aside className="sidebar"><div className="brand-mark brand-cat" style={{ backgroundImage: `url(${catStickerSheet})` }}></div><h1>繁星要塞</h1><nav><button className={activeSection === 'matrix' ? 'active' : ''} onClick={() => goTo('matrix')}>▦ 要塞分包</button><button className={activeSection === 'members' ? 'active' : ''} onClick={() => goTo('members')}>♙ 成员管理与考核</button><button className={activeSection === 'accessories' ? 'active' : ''} onClick={() => goTo('accessories')}>◇ 饰品排队</button><button className={activeSection === 'instructions' ? 'active' : ''} onClick={() => goTo('instructions')}>▤ 使用说明</button></nav><div className="sidebar-note">数据只保存在当前浏览器<br />导入即用，导出即走</div></aside>
     <main className="content">
       <header className="topbar"><div><div className="eyebrow">FORTRESS DISTRIBUTION</div><h2>本周要塞包分配</h2></div><div className="toolbar"><button className="btn secondary" onClick={() => fileRef.current?.click()}>⇧ 导入 XLSX</button><input ref={fileRef} type="file" accept=".xlsx,.xls" hidden onChange={handleImport} /><button className="btn primary" onClick={() => exportWorkbook(members, schedule, ranked)}>⇩ 导出单表 XLSX</button></div></header>
       <section className="notice">{notice}<span className="notice-right"><label className="toggle"><input type="checkbox" checked={contest} onChange={(e) => setContest(e.target.checked)} /><span></span> 争霸周（最高 {scoreMax} 分）</label></span></section>
@@ -365,7 +365,7 @@ export default function App() {
                     const previousPower = member.previousPower || 0
                     const growth = member.weeklyPower || 0
                     return (
-                      <tr key={member.id} className={powerRank ? `tier-row ${tierForRank(powerRank).color}` : ''}>
+                      <tr key={member.id}>
                         <td><span className="rank-pill">{powerRank || '—'}</span></td>
                         <td><input value={member.name} onChange={(e) => updateMember(member.id, { name: e.target.value })} /></td>
                         <td><input type="number" value={previousPower || ''} onChange={(e) => updateMember(member.id, { previousPower: e.target.value === '' ? 0 : Number(e.target.value) })} /></td>
@@ -424,7 +424,7 @@ export default function App() {
                         <td><span className="rank-pill">{scoreRank || '—'}</span></td>
                         <td><input value={member.name} onChange={(e) => updateMember(member.id, { name: e.target.value })} /></td>
                         <td><input type="number" min="0" max={scoreMax} value={member.score || ''} placeholder="0" onChange={(e) => updateMember(member.id, { score: e.target.value === '' ? 0 : Number(e.target.value) })} /></td>
-                        <td><span className="rank-pill">{powerRank || '—'}</span></td>
+                        <td><span className={powerRank ? `tier-dot ${tierForRank(powerRank).color}` : 'rank-pill'}>{powerRank || '—'}</span></td>
                         <td><button className="icon-btn" title="删除成员" onClick={() => removeMember(member.id)}>×</button></td>
                       </tr>
                     )
