@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import ExcelJS from 'exceljs'
 import catStickerSheet from './assets/cat-sticker-sheet.png'
+import { supabase } from './supabase'
 
 type Member = {
   id: string
@@ -178,12 +179,47 @@ async function exportWorkbook(members: Member[], schedule: Schedule, ranked: Mem
   const buffer = await workbook.xlsx.writeBuffer(); const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = '繁星本周要塞包分配.xlsx'; link.click(); URL.revokeObjectURL(url)
 }
 
+const SHARED_STATE_ID = 'main'
+type SharedStateRow = { id: string; members: Member[]; queues: Record<AccessoryName, QueueEntry[]>; last_sweep: string; contest: boolean }
+
 export default function App() {
   const [members, setMembers] = useState<Member[]>(() => { try { const saved = localStorage.getItem('fortress-members'); return saved ? JSON.parse(saved).map((member: Member) => ({ ...member, weeklyPower: member.weeklyPower || 0 })) : [] } catch { return [] } })
   const [contest, setContest] = useState(false); const [search, setSearch] = useState(''); const [notice, setNotice] = useState('已加载示例数据，可直接编辑或导入本周表格。'); const [activeSection, setActiveSection] = useState('matrix'); const fileRef = useRef<HTMLInputElement>(null)
   const [queues, setQueues] = useState<Record<AccessoryName, QueueEntry[]>>(() => { try { const saved = localStorage.getItem('fortress-accessory-queues'); return saved ? { ...emptyQueues(), ...JSON.parse(saved) } : emptyQueues() } catch { return emptyQueues() } })
   const [queueInputs, setQueueInputs] = useState<Record<AccessoryName, string>>(() => ({ 手镯: '', 戒指: '', 耳环: '', 腰带: '', 项链: '', 徽章: '' }))
   const [lastSweep, setLastSweep] = useState(() => localStorage.getItem('fortress-accessory-last-sweep') || '')
+  const [cloudReady, setCloudReady] = useState(false)
+  useEffect(() => {
+    let cancelled = false
+    const loadSharedState = async () => {
+      if (!supabase) { setCloudReady(true); setNotice('当前未配置云端连接，数据只保存在本机。'); return }
+      const { data, error } = await supabase.from('fortress_state').select('members,queues,last_sweep,contest').eq('id', SHARED_STATE_ID).maybeSingle()
+      if (cancelled) return
+      if (error) { setCloudReady(true); setNotice(`云端读取失败，暂时使用本机数据：${error.message}`); return }
+      if (data) {
+        const row = data as SharedStateRow
+        setMembers(Array.isArray(row.members) ? row.members.map((member) => ({ ...member, weeklyPower: member.weeklyPower || 0 })) : [])
+        setQueues(row.queues ? { ...emptyQueues(), ...row.queues } : emptyQueues())
+        setLastSweep(row.last_sweep || '')
+        setContest(Boolean(row.contest))
+        setNotice('已连接共享数据，其他设备刷新后可看到最新内容。')
+      } else {
+        await supabase.from('fortress_state').upsert({ id: SHARED_STATE_ID, members, queues, last_sweep: lastSweep, contest, updated_at: new Date().toISOString() })
+        setNotice('已建立共享数据空间。')
+      }
+      setCloudReady(true)
+    }
+    void loadSharedState()
+    return () => { cancelled = true }
+  }, [])
+  useEffect(() => {
+    if (!cloudReady || !supabase) return
+    const timer = window.setTimeout(() => {
+      // @ts-expect-error Supabase client is intentionally untyped until the shared table is generated.
+      void supabase.from('fortress_state').upsert({ id: SHARED_STATE_ID, members, queues, last_sweep: lastSweep, contest, updated_at: new Date().toISOString() }).then(({ error }) => { if (error) setNotice(`云端同步失败：${error.message}`) })
+    }, 500)
+    return () => window.clearTimeout(timer)
+  }, [members, queues, lastSweep, contest, cloudReady])
   const ranked = useMemo(() => rankMembers(members), [members]); const powerRanked = useMemo(() => powerRankMembers(members), [members]); const schedule = useMemo(() => buildAutoSchedule(ranked), [ranked]); const scoreMax = contest ? 57 : 37
   const weeklyPowerTotal = useMemo(() => members.reduce((total, member) => total + (member.weeklyPower || 0), 0), [members])
   const counts = useMemo(() => { const result = new Map<string, { fire: number; middle: number }>(); Object.entries(schedule).forEach(([key, id]) => { if (!id) return; const type = key.split(':')[1] as PackageType; const current = result.get(id) ?? { fire: 0, middle: 0 }; if (type === 'fire') current.fire += 1; else current.middle += 1; result.set(id, current) }); return result }, [schedule])
