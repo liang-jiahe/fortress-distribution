@@ -424,7 +424,7 @@ export default function App() {
                         <td><span className="rank-pill">{scoreRank || '—'}</span></td>
                         <td><input value={member.name} onChange={(e) => updateMember(member.id, { name: e.target.value })} /></td>
                         <td><input type="number" min="0" max={scoreMax} value={member.score || ''} placeholder="0" onChange={(e) => updateMember(member.id, { score: e.target.value === '' ? 0 : Number(e.target.value) })} /></td>
-                        <td><span className={powerRank ? `tier-dot ${tierForRank(powerRank).color}` : 'rank-pill'}>{powerRank || '—'}</span></td>
+                        <td><span className={scoreRank ? `tier-dot ${tierForRank(scoreRank).color}` : 'rank-pill'}>{powerRank || '—'}</span></td>
                         <td><button className="icon-btn" title="删除成员" onClick={() => removeMember(member.id)}>×</button></td>
                       </tr>
                     )
