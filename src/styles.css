@@ -8,7 +8,7 @@ button, input, select { font: inherit; }
 .sidebar { width: 240px; flex: 0 0 240px; padding: 28px 20px; border-right: 2px dashed #bec9c2; background: rgba(255,255,255,.84); position: sticky; top: 0; height: 100vh; }
 .brand-mark { font-size: 36px; width: 64px; height: 64px; display:grid; place-items:center; background:#a6f2cf; border:2px solid #1b6b4f; border-radius: 22px 12px 24px 14px; transform:rotate(-6deg); box-shadow:4px 4px 0 rgba(27,107,79,.14); }
 .sidebar h1 { margin: 20px 0 3px; font: 700 30px Caveat, cursive; color: #1b6b4f; }
-.sidebar h1::after { content:'署名 · 繁星'; display:block; margin-top:6px; color:#8f4953; font:600 14px Quicksand, "Microsoft YaHei", sans-serif; letter-spacing:.12em; }
+.sidebar h1::after { content:'署名 · 繁星の猫猫星'; display:table; margin-top:9px; padding:6px 10px; color:#8f4953; font:700 12px Quicksand, "Microsoft YaHei", sans-serif; letter-spacing:.08em; background:#fff7f8; border:1.5px solid #d8929d; border-radius:7px 12px 8px 13px; box-shadow:2px 2px 0 rgba(143,73,83,.12); }
 .sidebar p { margin:0 0 28px; color:#6f7973; font-size:13px; }
 .sidebar nav { display:grid; gap:8px; }
 .sidebar nav button { width:100%; padding: 12px 14px; color:#52615a; border:1px dashed transparent; border-radius: 15px; font-weight:600; background:transparent; text-align:left; cursor:pointer; transition:.2s; }
