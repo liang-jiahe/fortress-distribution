@@ -7,6 +7,7 @@ type Member = {
   id: string
   name: string
   power: number
+  previousPower?: number
   weeklyPower: number
   score: number | null
   remark: string
@@ -79,7 +80,16 @@ const SAMPLE_SCORE_BY_NAME: Record<string, number> = {
 }
 
 function makeSampleMembers(): Member[] {
-  return SAMPLE_NAMES.map((name, index) => ({ id: `m-${index + 1}`, name, power: SAMPLE_POWER[index], weeklyPower: 0, score: SAMPLE_SCORE_BY_NAME[name] ?? null, remark: '', order: index }))
+  return SAMPLE_NAMES.map((name, index) => ({ id: `m-${index + 1}`, name, power: SAMPLE_POWER[index], previousPower: SAMPLE_POWER[index], weeklyPower: 0, score: SAMPLE_SCORE_BY_NAME[name] ?? null, remark: '', order: index }))
+}
+
+function normalizeMember(member: Member): Member {
+  const weeklyPower = Number(member.weeklyPower) || 0
+  return { ...member, previousPower: member.previousPower ?? Math.max((Number(member.power) || 0) - weeklyPower, 0), weeklyPower }
+}
+
+function cloneMembers(source: Member[]) {
+  return source.map((member) => ({ ...member }))
 }
 
 function tierForRank(rank: number) { return TIERS.find((tier) => rank >= tier.min && rank <= tier.max) ?? TIERS[TIERS.length - 1] }
@@ -182,8 +192,10 @@ const SHARED_STATE_ID = 'main'
 type SharedStateRow = { id: string; members: Member[]; queues: Record<AccessoryName, QueueEntry[]>; last_sweep: string; contest: boolean }
 
 export default function App() {
-  const [members, setMembers] = useState<Member[]>(() => { try { const saved = localStorage.getItem('fortress-members'); return saved ? JSON.parse(saved).map((member: Member) => ({ ...member, weeklyPower: member.weeklyPower || 0 })) : [] } catch { return [] } })
+  const [members, setMembers] = useState<Member[]>(() => { try { const saved = localStorage.getItem('fortress-members'); return saved ? JSON.parse(saved).map((member: Member) => normalizeMember(member)) : [] } catch { return [] } })
   const [contest, setContest] = useState(false); const [notice, setNotice] = useState('已加载示例数据，可直接编辑或导入本周表格。'); const [activeSection, setActiveSection] = useState('matrix'); const fileRef = useRef<HTMLInputElement>(null)
+  const undoStack = useRef<Member[][]>([])
+  const redoStack = useRef<Member[][]>([])
   const [queues, setQueues] = useState<Record<AccessoryName, QueueEntry[]>>(() => { try { const saved = localStorage.getItem('fortress-accessory-queues'); return saved ? { ...emptyQueues(), ...JSON.parse(saved) } : emptyQueues() } catch { return emptyQueues() } })
   const [queueInputs, setQueueInputs] = useState<Record<AccessoryName, string>>(() => ({ 手镯: '', 戒指: '', 耳环: '', 腰带: '', 项链: '', 徽章: '' }))
   const [lastSweep, setLastSweep] = useState(() => localStorage.getItem('fortress-accessory-last-sweep') || '')
@@ -199,7 +211,7 @@ export default function App() {
       if (data) {
         const row = data as SharedStateRow
         setCloudStateExists(true)
-        const remoteMembers = Array.isArray(row.members) ? row.members.map((member) => ({ ...member, weeklyPower: member.weeklyPower || 0 })) : []
+        const remoteMembers = Array.isArray(row.members) ? row.members.map((member) => normalizeMember(member)) : []
         const shouldMigrateLocalRoster = members.length > remoteMembers.length
         const hydratedMembers = shouldMigrateLocalRoster
           ? [...members, ...remoteMembers.filter((remote) => !members.some((local) => local.id === remote.id || local.name.trim() === remote.name.trim()))]
@@ -246,19 +258,43 @@ export default function App() {
   useEffect(() => { localStorage.setItem('fortress-members', JSON.stringify(members)) }, [members])
   useEffect(() => { localStorage.setItem('fortress-accessory-queues', JSON.stringify(queues)) }, [queues])
   useEffect(() => { if (new Date().getDay() === 0 && lastSweep !== sundayDateKey()) { setQueues((current) => sweepAccessoryQueues(current)); setLastSweep(sundayDateKey()); localStorage.setItem('fortress-accessory-last-sweep', sundayDateKey()); setNotice('今天是周日，已为每种饰品发放队首名额。') } }, [lastSweep])
-  const updateMember = (id: string, patch: Partial<Member>) => { setMembers((current) => current.map((member) => member.id === id ? { ...member, ...patch } : member)) }
-  const addMember = () => { const index = members.length + 1; setMembers((current) => [...current, { id: `m-${Date.now()}`, name: `新成员${index}`, power: 0, weeklyPower: 0, score: null, remark: '', order: current.length }]); setNotice('已新增成员，请填写姓名、战力和考核分。') }
-  const removeMember = (id: string) => { setMembers((current) => current.filter((member) => member.id !== id)); setNotice('成员已删除，排名和矩阵已更新。') }
-  const calculateWeeklyPower = () => { setMembers((current) => current.map((member) => ({ ...member, weeklyPower: 0 }))); setNotice('已更新战力：本周战力已转为上周战力，提升已归零。') }
-  const resetScores = () => { setMembers((current) => current.map((member) => ({ ...member, score: 36 }))); setNotice('考核分数已全部重置为 36。') }
+  const commitMembers = (updater: (current: Member[]) => Member[], message?: string) => {
+    setMembers((current) => {
+      undoStack.current.push(cloneMembers(current))
+      if (undoStack.current.length > 80) undoStack.current.shift()
+      redoStack.current = []
+      return updater(current).map((member) => normalizeMember(member))
+    })
+    if (message) setNotice(message)
+  }
+  const undoMembers = () => {
+    const previous = undoStack.current.pop()
+    if (!previous) { setNotice('没有可撤销的步骤。'); return }
+    redoStack.current.push(cloneMembers(members))
+    setMembers(cloneMembers(previous))
+    setNotice('已撤销上一步。')
+  }
+  const redoMembers = () => {
+    const next = redoStack.current.pop()
+    if (!next) { setNotice('没有可前进的步骤。'); return }
+    undoStack.current.push(cloneMembers(members))
+    setMembers(cloneMembers(next))
+    setNotice('已恢复下一步。')
+  }
+  const updateMember = (id: string, patch: Partial<Member>) => { commitMembers((current) => current.map((member) => member.id === id ? { ...member, ...patch } : member)) }
+  const addMember = () => { const index = members.length + 1; commitMembers((current) => [...current, { id: `m-${Date.now()}`, name: `新成员${index}`, power: 0, previousPower: 0, weeklyPower: 0, score: null, remark: '', order: current.length }], '已新增成员，请填写姓名、战力和考核分。') }
+  const removeMember = (id: string) => { commitMembers((current) => current.filter((member) => member.id !== id), '成员已删除，排名和矩阵已更新。') }
+  const calculateWeeklyPower = () => { commitMembers((current) => current.map((member) => ({ ...member, previousPower: member.power, weeklyPower: 0 })), '已更新战力：本周战力已转为上周战力，提升已归零。') }
+  const calculateGrowth = () => { commitMembers((current) => current.map((member) => ({ ...member, weeklyPower: Math.max((member.power || 0) - (member.previousPower || 0), 0) })), '已按“本周战力 - 上周战力”计算提升。') }
+  const resetScores = () => { commitMembers((current) => current.map((member) => ({ ...member, score: 36 })), '考核分数已全部重置为 36。') }
   const visiblePowerMembers = powerRanked
   const visibleScoreMembers = ranked
-  const clear = () => { setMembers([]); setNotice('已清空成员数据。') }
-  const reset = () => { setNotice('示例数据已停用，系统会一直保留最新战力。') }
+  const clear = () => { commitMembers(() => [], '已清空成员数据。') }
+  const reset = () => { commitMembers(() => makeSampleMembers(), '已恢复以前的 30 人成员数据。') }
   const addQueueEntry = (accessory: AccessoryName) => { const name = queueInputs[accessory].trim(); if (!name) { setNotice(`请先填写想要${accessory}的姓名。`); return } if (queues[accessory].some((entry) => entry.name.trim().toLowerCase() === name.toLowerCase())) { setNotice(`${name} 已经在${accessory}队列中。`); return } setQueues((current) => ({ ...current, [accessory]: [...current[accessory], { id: `q-${Date.now()}-${accessory}`, name, addedAt: new Date().toISOString() }] })); setQueueInputs((current) => ({ ...current, [accessory]: '' })); setNotice(`${name} 已加入${accessory}排队。`) }
   const removeQueueEntry = (accessory: AccessoryName, id: string) => { setQueues((current) => ({ ...current, [accessory]: current[accessory].filter((entry) => entry.id !== id) })); setNotice('已标记为分发完成，队列已更新。') }
   const sweepQueuesNow = () => { const waiting = ACCESSORIES.reduce((total, accessory) => total + (queues[accessory.name][0] ? 1 : 0), 0); setQueues((current) => sweepAccessoryQueues(current)); setLastSweep(sundayDateKey()); localStorage.setItem('fortress-accessory-last-sweep', sundayDateKey()); setNotice(`已手动发放 ${waiting} 个饰品队首名额。`) }
-  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => { const file = event.target.files?.[0]; if (!file) return; try { const imported = await importWorkbook(file); if (!imported.length) throw new Error('没有识别到成员'); const latest = new Map(members.map((member) => [member.name.trim(), member])); const prepared = imported.map((member) => { const saved = latest.get(member.name.trim()); return saved ? { ...member, id: saved.id, power: Math.max(member.power, saved.power), weeklyPower: 0, order: saved.order } : member }); setMembers(prepared); setNotice(`已导入 ${prepared.length} 名成员；同名成员已保留最新战力。`) } catch (error) { setNotice(`导入失败：${error instanceof Error ? error.message : '文件格式不正确'}`) } finally { event.target.value = '' } }
+  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => { const file = event.target.files?.[0]; if (!file) return; try { const imported = await importWorkbook(file); if (!imported.length) throw new Error('没有识别到成员'); const latest = new Map(members.map((member) => [member.name.trim(), member])); const prepared = imported.map((member) => { const saved = latest.get(member.name.trim()); return saved ? { ...member, id: saved.id, power: Math.max(member.power, saved.power), previousPower: saved.previousPower ?? Math.max(saved.power - saved.weeklyPower, 0), weeklyPower: saved.weeklyPower || 0, order: saved.order } : normalizeMember({ ...member, previousPower: member.power }) }); commitMembers(() => prepared, `已导入 ${prepared.length} 名成员；同名成员已保留最新战力。`) } catch (error) { setNotice(`导入失败：${error instanceof Error ? error.message : '文件格式不正确'}`) } finally { event.target.value = '' } }
   const goTo = (section: string) => { setActiveSection(section); document.getElementById(section)?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
   return <div className="app-shell">
     <span className="cat-sticker cat-art sticker-cat" style={{ backgroundImage: `url(${catStickerSheet})` }} aria-hidden="true"></span><span className="cat-sticker cat-art sticker-paw" style={{ backgroundImage: `url(${catStickerSheet})` }} aria-hidden="true"></span><span className="cat-sticker cat-art sticker-heart" style={{ backgroundImage: `url(${catStickerSheet})` }} aria-hidden="true"></span>
@@ -276,6 +312,8 @@ export default function App() {
             <h3>战力排行与考核分数</h3>
           </div>
           <div className="row-actions">
+            <button className="btn ghost" onClick={undoMembers}>撤销</button>
+            <button className="btn ghost" onClick={redoMembers}>前进</button>
             <button className="btn primary" onClick={addMember}>＋ 新增成员</button>
             <button className="btn ghost" onClick={reset}>恢复示例</button>
             <button className="btn danger" onClick={clear}>清空</button>
@@ -290,6 +328,7 @@ export default function App() {
               </div>
               <div className="table-heading-actions">
                 <small>按本周战力排序</small>
+                <button className="btn ghost" onClick={calculateGrowth}>计算提升</button>
                 <button className="btn ghost" onClick={calculateWeeklyPower}>更新战力</button>
               </div>
             </div>
@@ -309,13 +348,13 @@ export default function App() {
                   {visiblePowerMembers.map((member) => {
                     const powerRank = powerRanked.findIndex((entry) => entry.id === member.id) + 1
                     const currentPower = member.power || 0
+                    const previousPower = member.previousPower || 0
                     const growth = member.weeklyPower || 0
-                    const previousPower = Math.max(currentPower - growth, 0)
                     return (
                       <tr key={member.id}>
                         <td><span className="rank-pill">{powerRank || '—'}</span></td>
                         <td><input value={member.name} onChange={(e) => updateMember(member.id, { name: e.target.value })} /></td>
-                        <td>{previousPower}</td>
+                        <td><input type="number" value={previousPower || ''} onChange={(e) => updateMember(member.id, { previousPower: e.target.value === '' ? 0 : Number(e.target.value) })} /></td>
                         <td><input type="number" value={currentPower || ''} onChange={(e) => updateMember(member.id, { power: e.target.value === '' ? 0 : Number(e.target.value) })} /></td>
                         <td><input type="number" value={growth || ''} onChange={(e) => updateMember(member.id, { weeklyPower: e.target.value === '' ? 0 : Number(e.target.value) })} /></td>
                         <td><button className="icon-btn" title="删除成员" onClick={() => removeMember(member.id)}>×</button></td>
