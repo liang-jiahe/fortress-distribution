@@ -200,11 +200,21 @@ export default function App() {
       if (data) {
         const row = data as SharedStateRow
         setCloudStateExists(true)
-        setMembers(Array.isArray(row.members) ? row.members.map((member) => ({ ...member, weeklyPower: member.weeklyPower || 0 })) : [])
+        const remoteMembers = Array.isArray(row.members) ? row.members.map((member) => ({ ...member, weeklyPower: member.weeklyPower || 0 })) : []
+        const shouldMigrateLocalRoster = members.length > remoteMembers.length
+        const hydratedMembers = shouldMigrateLocalRoster
+          ? [...members, ...remoteMembers.filter((remote) => !members.some((local) => local.id === remote.id || local.name.trim() === remote.name.trim()))]
+          : remoteMembers
+        setMembers(hydratedMembers)
+        if (shouldMigrateLocalRoster) {
+          await supabase.from('fortress_state').upsert({ id: SHARED_STATE_ID, members: hydratedMembers, queues, last_sweep: lastSweep, contest, updated_at: new Date().toISOString() })
+          setNotice('已将本机成员名单合并到共享数据，其他设备刷新即可看到。')
+        }
         setQueues(row.queues ? { ...emptyQueues(), ...row.queues } : emptyQueues())
         setLastSweep(row.last_sweep || '')
         setContest(Boolean(row.contest))
         setNotice('已连接共享数据，其他设备刷新后可看到最新内容。')
+        if (shouldMigrateLocalRoster) setNotice('已将本机成员名单合并到共享数据，其他设备刷新即可看到。')
       } else {
         if (members.length || Object.values(queues).some((entries) => entries.length)) {
           await supabase.from('fortress_state').upsert({ id: SHARED_STATE_ID, members, queues, last_sweep: lastSweep, contest, updated_at: new Date().toISOString() })
