@@ -216,24 +216,38 @@ export default function App() {
         const hydratedMembers = shouldMigrateLocalRoster
           ? [...members, ...remoteMembers.filter((remote) => !members.some((local) => local.id === remote.id || local.name.trim() === remote.name.trim()))]
           : remoteMembers
-        setMembers(hydratedMembers)
-        if (shouldMigrateLocalRoster) {
-          await supabase.from('fortress_state').upsert({ id: SHARED_STATE_ID, members: hydratedMembers, queues, last_sweep: lastSweep, contest, updated_at: new Date().toISOString() })
-          setNotice('已将本机成员名单合并到共享数据，其他设备刷新即可看到。')
+        const hydratedQueues = row.queues ? { ...emptyQueues(), ...row.queues } : emptyQueues()
+        if (!hydratedMembers.length && !members.length) {
+          const sampleMembers = makeSampleMembers()
+          setMembers(sampleMembers)
+          setQueues(hydratedQueues)
+          setLastSweep(row.last_sweep || '')
+          setContest(Boolean(row.contest))
+          await supabase.from('fortress_state').upsert({ id: SHARED_STATE_ID, members: sampleMembers, queues: hydratedQueues, last_sweep: row.last_sweep || '', contest: Boolean(row.contest), updated_at: new Date().toISOString() })
+          setCloudStateExists(true)
+          setNotice('没有找到成员数据，已自动导入以前的 30 人成员名单，并同步到共享数据。')
+        } else {
+          setMembers(hydratedMembers)
+          if (shouldMigrateLocalRoster) {
+            await supabase.from('fortress_state').upsert({ id: SHARED_STATE_ID, members: hydratedMembers, queues, last_sweep: lastSweep, contest, updated_at: new Date().toISOString() })
+            setNotice('已将本机成员名单合并到共享数据，其他设备刷新即可看到。')
+          }
+          setQueues(hydratedQueues)
+          setLastSweep(row.last_sweep || '')
+          setContest(Boolean(row.contest))
+          setNotice(shouldMigrateLocalRoster ? '已将本机成员名单合并到共享数据，其他设备刷新即可看到。' : '已连接共享数据，其他设备刷新后可看到最新内容。')
         }
-        setQueues(row.queues ? { ...emptyQueues(), ...row.queues } : emptyQueues())
-        setLastSweep(row.last_sweep || '')
-        setContest(Boolean(row.contest))
-        setNotice('已连接共享数据，其他设备刷新后可看到最新内容。')
-        if (shouldMigrateLocalRoster) setNotice('已将本机成员名单合并到共享数据，其他设备刷新即可看到。')
       } else {
         if (members.length || Object.values(queues).some((entries) => entries.length)) {
           await supabase.from('fortress_state').upsert({ id: SHARED_STATE_ID, members, queues, last_sweep: lastSweep, contest, updated_at: new Date().toISOString() })
           setCloudStateExists(true)
           setNotice('已建立共享数据空间。')
         } else {
-          setCloudStateExists(false)
-          setNotice('云端已连接，请在成员管理中添加成员。')
+          const sampleMembers = makeSampleMembers()
+          setMembers(sampleMembers)
+          setCloudStateExists(true)
+          await supabase.from('fortress_state').upsert({ id: SHARED_STATE_ID, members: sampleMembers, queues, last_sweep: lastSweep, contest, updated_at: new Date().toISOString() })
+          setNotice('没有找到成员数据，已自动导入以前的 30 人成员名单，并同步到共享数据。')
         }
       }
       setCloudReady(true)
