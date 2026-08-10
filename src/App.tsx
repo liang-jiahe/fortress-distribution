@@ -365,7 +365,7 @@ export default function App() {
                     const previousPower = member.previousPower || 0
                     const growth = member.weeklyPower || 0
                     return (
-                      <tr key={member.id}>
+                      <tr key={member.id} className={powerRank ? `tier-row ${tierForRank(powerRank).color}` : ''}>
                         <td><span className="rank-pill">{powerRank || '—'}</span></td>
                         <td><input value={member.name} onChange={(e) => updateMember(member.id, { name: e.target.value })} /></td>
                         <td><input type="number" value={previousPower || ''} onChange={(e) => updateMember(member.id, { previousPower: e.target.value === '' ? 0 : Number(e.target.value) })} /></td>
