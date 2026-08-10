@@ -296,10 +296,9 @@ export default function App() {
                   <tr>
                     <th>战力排名</th>
                     <th>成员姓名</th>
-                    <th>本周战力</th>
                     <th>上周战力</th>
+                    <th>本周战力</th>
                     <th>提升</th>
-                    <th>备注</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -313,10 +312,9 @@ export default function App() {
                       <tr key={member.id}>
                         <td><span className="rank-pill">{powerRank || '—'}</span></td>
                         <td><input value={member.name} onChange={(e) => updateMember(member.id, { name: e.target.value })} /></td>
-                        <td><input type="number" value={currentPower} onChange={(e) => updateMember(member.id, { power: Number(e.target.value) || 0 })} /></td>
                         <td><input type="number" value={previousPower} onChange={(e) => updateMember(member.id, { weeklyPower: Number(e.target.value) || 0 })} /></td>
+                        <td><input type="number" value={currentPower} onChange={(e) => updateMember(member.id, { power: Number(e.target.value) || 0 })} /></td>
                         <td>{growth}</td>
-                        <td><input value={member.remark} onChange={(e) => updateMember(member.id, { remark: e.target.value })} placeholder="备注" /></td>
                         <td><button className="icon-btn" title="删除成员" onClick={() => removeMember(member.id)}>×</button></td>
                       </tr>
                     )
@@ -324,10 +322,9 @@ export default function App() {
                   <tr className="summary-row">
                     <td>合计</td>
                     <td>全部成员</td>
-                    <td>{powerTotal}</td>
                     <td>{previousPowerTotal}</td>
+                    <td>{powerTotal}</td>
                     <td>{weeklyPowerTotal}</td>
-                    <td></td>
                     <td></td>
                   </tr>
                 </tbody>
@@ -352,7 +349,6 @@ export default function App() {
                     <th>考核分数</th>
                     <th>战力排名</th>
                     <th>总战力</th>
-                    <th>备注</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -367,7 +363,6 @@ export default function App() {
                         <td><input type="number" min="0" max={scoreMax} value={member.score ?? ''} placeholder="未填" onChange={(e) => updateMember(member.id, { score: e.target.value === '' ? null : Number(e.target.value) })} /></td>
                         <td><span className="rank-pill">{powerRank || '—'}</span></td>
                         <td>{member.power || 0}</td>
-                        <td><input value={member.remark} onChange={(e) => updateMember(member.id, { remark: e.target.value })} placeholder="备注" /></td>
                         <td><button className="icon-btn" title="删除成员" onClick={() => removeMember(member.id)}>×</button></td>
                       </tr>
                     )
