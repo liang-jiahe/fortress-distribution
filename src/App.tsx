@@ -239,7 +239,7 @@ export default function App() {
     return () => window.clearTimeout(timer)
   }, [members, queues, lastSweep, contest, cloudReady, cloudStateExists])
   const ranked = useMemo(() => rankMembers(members), [members]); const powerRanked = useMemo(() => powerRankMembers(members), [members]); const schedule = useMemo(() => buildAutoSchedule(ranked), [ranked]); const scoreMax = contest ? 57 : 37
-  const weeklyPowerTotal = useMemo(() => members.reduce((total, member) => total + Math.max((member.power || 0) - (member.weeklyPower || 0), 0), 0), [members])
+  const weeklyPowerTotal = useMemo(() => members.reduce((total, member) => total + (member.weeklyPower || 0), 0), [members])
   const powerTotal = useMemo(() => members.reduce((total, member) => total + (member.power || 0), 0), [members])
   const previousPowerTotal = useMemo(() => members.reduce((total, member) => total + (member.weeklyPower || 0), 0), [members])
   const counts = useMemo(() => { const result = new Map<string, { fire: number; middle: number }>(); Object.entries(schedule).forEach(([key, id]) => { if (!id) return; const type = key.split(':')[1] as PackageType; const current = result.get(id) ?? { fire: 0, middle: 0 }; if (type === 'fire') current.fire += 1; else current.middle += 1; result.set(id, current) }); return result }, [schedule])
@@ -306,15 +306,15 @@ export default function App() {
                   {visiblePowerMembers.map((member) => {
                     const powerRank = powerRanked.findIndex((entry) => entry.id === member.id) + 1
                     const currentPower = member.power || 0
-                    const previousPower = member.weeklyPower || 0
-                    const growth = Math.max(currentPower - previousPower, 0)
+                    const growth = member.weeklyPower || 0
+                    const previousPower = Math.max(currentPower - growth, 0)
                     return (
                       <tr key={member.id}>
                         <td><span className="rank-pill">{powerRank || '—'}</span></td>
                         <td><input value={member.name} onChange={(e) => updateMember(member.id, { name: e.target.value })} /></td>
-                        <td><input type="number" value={previousPower} onChange={(e) => updateMember(member.id, { weeklyPower: Number(e.target.value) || 0 })} /></td>
+                        <td>{previousPower}</td>
                         <td><input type="number" value={currentPower} onChange={(e) => updateMember(member.id, { power: Number(e.target.value) || 0 })} /></td>
-                        <td>{growth}</td>
+                        <td><input type="number" value={growth} onChange={(e) => updateMember(member.id, { weeklyPower: Number(e.target.value) || 0 })} /></td>
                         <td><button className="icon-btn" title="删除成员" onClick={() => removeMember(member.id)}>×</button></td>
                       </tr>
                     )
@@ -331,6 +331,11 @@ export default function App() {
               </table>
               {visiblePowerMembers.length === 0 && <div className="empty">没有匹配的成员，先添加一名试试。</div>}
             </div>
+          </div>
+          <div className="split-divider" aria-hidden="true">
+            <span className="split-divider-sticker" style={{ backgroundImage: `url(${catStickerSheet})` }}></span>
+            <span className="split-divider-line"></span>
+            <span className="split-divider-sticker split-divider-sticker-alt" style={{ backgroundImage: `url(${catStickerSheet})` }}></span>
           </div>
           <div>
             <div className="table-heading">

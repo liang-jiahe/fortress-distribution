@@ -44,19 +44,23 @@ button, input, select { font: inherit; }
 .session-block { border:2px solid #3f4943; background:#fff; box-shadow:3px 3px 0 rgba(63,73,67,.12); }.session-title,.session-types div,.session-row select { border-right:1px solid rgba(63,73,67,.45); }.session-title { text-align:center; font-weight:700; padding:7px; border-bottom:1px solid #3f4943; background:#bfbfbf; }.session-types { display:grid; grid-template-columns:repeat(3,1fr); }.session-types div { text-align:center; font-weight:700; font-size:12px; padding:5px; border-bottom:1px solid #3f4943; }.session-row { display:grid; grid-template-columns:repeat(3,1fr); min-height:34px; }.session-row select { width:100%; min-width:0; border-top:0; border-left:0; border-bottom:1px solid rgba(63,73,67,.35); border-radius:0; background:#fff; padding:5px 4px; text-align:center; font-size:12px; color:#2e3833; }.session-row select:last-child,.session-types div:last-child { border-right:0; }.session-row select:focus { outline:2px solid #1b6b4f; z-index:2; }.rank-fill.pink,.tier-card.pink,.swatch.pink{background:#f7dde3}.rank-fill.orange,.tier-card.orange,.swatch.orange{background:#ffc000}.rank-fill.yellow,.tier-card.yellow,.swatch.yellow{background:#fff200}.rank-fill.green,.tier-card.green,.swatch.green{background:#92d050}.rank-fill.cyan,.tier-card.cyan,.swatch.cyan{background:#10b8e8}.rank-fill.blue,.tier-card.blue,.swatch.blue{background:#4472c4;color:white}.legend { display:flex; gap:15px; flex-wrap:wrap; color:#52615a; font-size:12px; font-weight:700; margin-top:10px; }.legend span { display:flex; align-items:center; gap:5px; }.swatch { width:14px; height:14px; border:1px solid #64716a; border-radius:3px; display:inline-block; }
 .search { width:150px; border:2px solid #bec9c2; border-radius:12px; padding:9px 12px; background:#fff; outline:none; }.search:focus, table input:focus { border-color:#1b6b4f; }
   .table-wrap { overflow-x:auto; } table { width:100%; min-width:940px; border-collapse:collapse; } th,td { border-bottom:1px solid #e0e3e5; text-align:left; padding:9px 8px; font-size:13px; white-space:nowrap; } th { color:#52615a; background:#f6f6f2; font-size:12px; }.table-wrap table input { border:1px solid transparent; background:transparent; border-radius:7px; padding:6px 7px; width:100%; min-width:70px; color:#191c1e; }.table-wrap table input:hover { background:#f6f6f2; }.rank-pill,.tier-dot { display:inline-grid; place-items:center; min-width:28px; height:25px; padding:0 7px; border-radius:10px; background:#e6e8ea; font-weight:700; }.tier-dot { border-radius:7px; }.tier-dot.pink{background:#f7dde3}.tier-dot.orange{background:#ffc000}.tier-dot.yellow{background:#fff200}.tier-dot.green{background:#92d050}.tier-dot.cyan{background:#10b8e8}.tier-dot.blue{background:#4472c4;color:#fff}.icon-btn { border:0; background:transparent; color:#ba1a1a; font-size:22px; cursor:pointer; }.empty { text-align:center; padding:28px; color:#8a938e; }
-.split-tables { display:grid; grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr); gap:16px; align-items:start; }
+ .split-tables { display:grid; grid-template-columns:minmax(0,1fr) 34px minmax(0,1fr); gap:18px; align-items:stretch; }
 .split-panel { margin:0; }
 .split-panel .panel-heading { margin-bottom:12px; }
 .split-panel .table-wrap { overflow-x:auto; }
-.split-panel .table-wrap table { min-width:0; }
-.split-panel th, .split-panel td { padding:8px 6px; font-size:12px; }
-.summary-row td { background:#f5f8f4; font-weight:700; }
-.table-heading { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:10px; }
-.table-heading h4 { margin:0; color:#1b6b4f; font:700 22px Caveat, "Microsoft YaHei", cursive; }
-.table-heading small { color:#6f7973; font-size:12px; }
-.rules-panel { display:flex; align-items:center; gap:22px; flex-wrap:wrap; }.tier-cards { display:flex; gap:10px; flex-wrap:wrap; flex:1; }.tier-card { min-width:120px; padding:11px 13px; border:1px solid #66726b; border-radius:9px; display:grid; gap:3px; }.tier-card b { font-size:13px; }.tier-card span,.tier-card strong { font-size:12px; }.rule-copy { width:100%; margin:0; color:#6f7973; font-size:12px; }
+ .split-panel .table-wrap table { min-width:0; }
+ .split-panel th, .split-panel td { padding:8px 6px; font-size:12px; }
+ .summary-row td { background:#f5f8f4; font-weight:700; }
+ .table-heading { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:10px; }
+ .table-heading h4 { margin:0; color:#1b6b4f; font:700 22px Caveat, "Microsoft YaHei", cursive; }
+ .table-heading small { color:#6f7973; font-size:12px; }
+ .split-divider { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; }
+ .split-divider-line { width:2px; flex:1; min-height:160px; background:linear-gradient(180deg, rgba(27,107,79,.18), rgba(143,73,83,.42), rgba(27,107,79,.18)); border-radius:99px; }
+ .split-divider-sticker { width:42px; height:42px; background-size:300% 100%; background-position:center center; background-repeat:no-repeat; background-color:#fff; border:2px solid #3f4943; border-radius:50%; box-shadow:2px 2px 0 rgba(63,73,67,.12); }
+ .split-divider-sticker-alt { background-position:right center; }
+ .rules-panel { display:flex; align-items:center; gap:22px; flex-wrap:wrap; }.tier-cards { display:flex; gap:10px; flex-wrap:wrap; flex:1; }.tier-card { min-width:120px; padding:11px 13px; border:1px solid #66726b; border-radius:9px; display:grid; gap:3px; }.tier-card b { font-size:13px; }.tier-card span,.tier-card strong { font-size:12px; }.rule-copy { width:100%; margin:0; color:#6f7973; font-size:12px; }
   @media (max-width: 1000px) { .sidebar { display:none; }.content { padding:0 16px 50px; }.stats { grid-template-columns:repeat(2,1fr); }.topbar { align-items:flex-start; flex-direction:column; }.toolbar { width:100%; }.toolbar .btn { flex:1; } }
-  @media (max-width: 1200px) { .split-tables { grid-template-columns:1fr; } }
+  @media (max-width: 1200px) { .split-tables { grid-template-columns:1fr; } .split-divider { display:none; } }
   @media (max-width: 540px) { .stats { grid-template-columns:1fr 1fr; gap:9px; }.stat-card { padding:12px; }.stat-card strong { font-size:28px; }.panel { padding:15px; }.rules-panel { display:block; }.tier-cards { margin-top:14px; }.tier-card { min-width:100px; } }
 
 .header-fill.pink { background:#f7dde3; }
