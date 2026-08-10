@@ -51,3 +51,16 @@ button, input, select { font: inherit; }
 .header-fill.green { background:#92d050; }
 .header-fill.cyan { background:#10b8e8; }
 .header-fill.blue { background:#4472c4; color:#fff; }
+.matrix-name { min-width:0; border-right:1px solid rgba(63,73,67,.45); border-bottom:1px solid rgba(63,73,67,.35); padding:7px 4px; text-align:center; font-size:12px; display:flex; align-items:center; justify-content:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.matrix-name:last-child { border-right:0; }
+.protocol-copy { flex:1 1 360px; color:#52615a; font-size:13px; line-height:1.8; }
+.protocol-copy p { margin:0 0 6px; }
+.protocol-copy ul { margin:0; padding-left:20px; }
+.signature { text-align:center; color:#1b6b4f; font:600 20px Caveat, "Microsoft YaHei", cursive; letter-spacing:.08em; padding:0 0 28px; }
+.cat-sticker { position:fixed; z-index:0; pointer-events:none; user-select:none; filter:drop-shadow(2px 4px 2px rgba(63,73,67,.15)); opacity:.8; }
+.sticker-cat { right:30px; bottom:20px; font-size:70px; transform:rotate(8deg); }
+.sticker-paw { right:26%; top:145px; font-size:42px; opacity:.35; transform:rotate(-12deg); }
+.sticker-heart { left:260px; bottom:110px; font-size:34px; opacity:.35; transform:rotate(12deg); }
+.sidebar .brand-mark { position:relative; }
+.sidebar .brand-mark::after { content:'🐾'; position:absolute; right:-10px; top:-14px; font-size:24px; transform:rotate(18deg); }
+.session-row select { appearance:none; -webkit-appearance:none; pointer-events:none; }
