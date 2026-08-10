@@ -189,6 +189,7 @@ export default function App() {
   const [queueInputs, setQueueInputs] = useState<Record<AccessoryName, string>>(() => ({ 手镯: '', 戒指: '', 耳环: '', 腰带: '', 项链: '', 徽章: '' }))
   const [lastSweep, setLastSweep] = useState(() => localStorage.getItem('fortress-accessory-last-sweep') || '')
   const [cloudReady, setCloudReady] = useState(false)
+  const [cloudStateExists, setCloudStateExists] = useState(false)
   useEffect(() => {
     let cancelled = false
     const loadSharedState = async () => {
@@ -198,14 +199,21 @@ export default function App() {
       if (error) { setCloudReady(true); setNotice(`云端读取失败，暂时使用本机数据：${error.message}`); return }
       if (data) {
         const row = data as SharedStateRow
+        setCloudStateExists(true)
         setMembers(Array.isArray(row.members) ? row.members.map((member) => ({ ...member, weeklyPower: member.weeklyPower || 0 })) : [])
         setQueues(row.queues ? { ...emptyQueues(), ...row.queues } : emptyQueues())
         setLastSweep(row.last_sweep || '')
         setContest(Boolean(row.contest))
         setNotice('已连接共享数据，其他设备刷新后可看到最新内容。')
       } else {
-        await supabase.from('fortress_state').upsert({ id: SHARED_STATE_ID, members, queues, last_sweep: lastSweep, contest, updated_at: new Date().toISOString() })
-        setNotice('已建立共享数据空间。')
+        if (members.length || Object.values(queues).some((entries) => entries.length)) {
+          await supabase.from('fortress_state').upsert({ id: SHARED_STATE_ID, members, queues, last_sweep: lastSweep, contest, updated_at: new Date().toISOString() })
+          setCloudStateExists(true)
+          setNotice('已建立共享数据空间。')
+        } else {
+          setCloudStateExists(false)
+          setNotice('云端已连接，请在成员管理中添加成员。')
+        }
       }
       setCloudReady(true)
     }
@@ -213,13 +221,14 @@ export default function App() {
     return () => { cancelled = true }
   }, [])
   useEffect(() => {
-    if (!cloudReady || !supabase) return
+    if (!cloudReady || !supabase || (!cloudStateExists && !members.length && !Object.values(queues).some((entries) => entries.length))) return
+    setCloudStateExists(true)
     const timer = window.setTimeout(() => {
       // @ts-expect-error Supabase client is intentionally untyped until the shared table is generated.
       void supabase.from('fortress_state').upsert({ id: SHARED_STATE_ID, members, queues, last_sweep: lastSweep, contest, updated_at: new Date().toISOString() }).then(({ error }) => { if (error) setNotice(`云端同步失败：${error.message}`) })
     }, 500)
     return () => window.clearTimeout(timer)
-  }, [members, queues, lastSweep, contest, cloudReady])
+  }, [members, queues, lastSweep, contest, cloudReady, cloudStateExists])
   const ranked = useMemo(() => rankMembers(members), [members]); const powerRanked = useMemo(() => powerRankMembers(members), [members]); const schedule = useMemo(() => buildAutoSchedule(ranked), [ranked]); const scoreMax = contest ? 57 : 37
   const weeklyPowerTotal = useMemo(() => members.reduce((total, member) => total + (member.weeklyPower || 0), 0), [members])
   const counts = useMemo(() => { const result = new Map<string, { fire: number; middle: number }>(); Object.entries(schedule).forEach(([key, id]) => { if (!id) return; const type = key.split(':')[1] as PackageType; const current = result.get(id) ?? { fire: 0, middle: 0 }; if (type === 'fire') current.fire += 1; else current.middle += 1; result.set(id, current) }); return result }, [schedule])
