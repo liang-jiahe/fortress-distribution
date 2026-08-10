@@ -13,7 +13,8 @@ button, input, select { font: inherit; }
 .sidebar nav button { width:100%; padding: 12px 14px; color:#52615a; border:1px dashed transparent; border-radius: 15px; font-weight:600; background:transparent; text-align:left; cursor:pointer; transition:.2s; }
 .sidebar nav button.active, .sidebar nav button:hover { color:#00513a; background:#a7f3d0; border-color:#1b6b4f; transform:rotate(-1deg); }
 .sidebar-note { position:absolute; bottom:28px; color:#8a938e; font-size:12px; line-height:1.7; }
-.content { flex:1; min-width:0; padding: 0 34px 72px; max-width: 1600px; margin:0 auto; width:100%; }
+.content { flex:1; min-width:0; padding: 0 34px 72px; max-width: 1600px; margin:0 auto; width:100%; display:flex; flex-direction:column; }
+.topbar { order:1; }.notice { order:2; }.stats { order:3; }#members { order:4; }#matrix { order:5; }#accessories { order:6; }#instructions { order:7; }.signature { order:8; }
 .topbar { display:flex; justify-content:space-between; align-items:center; gap:20px; padding:28px 0 20px; border-bottom:2px dashed #bec9c2; }
 .eyebrow { color:#8f4953; font-size:11px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; }
 .topbar h2, .panel-heading h3 { margin: 6px 0 0; color:#1b6b4f; font:700 34px Caveat, "Microsoft YaHei", cursive; }
@@ -57,13 +58,16 @@ button, input, select { font: inherit; }
 .protocol-copy p { margin:0 0 6px; }
 .protocol-copy ul { margin:0; padding-left:20px; }
 .signature { text-align:center; color:#1b6b4f; font:600 20px Caveat, "Microsoft YaHei", cursive; letter-spacing:.08em; padding:0 0 28px; }
-.cat-sticker { position:fixed; z-index:0; pointer-events:none; user-select:none; filter:drop-shadow(2px 4px 2px rgba(63,73,67,.15)); opacity:.8; }
-.sticker-cat { right:30px; bottom:20px; font-size:70px; transform:rotate(8deg); }
-.sticker-paw { right:26%; top:145px; font-size:42px; opacity:.35; transform:rotate(-12deg); }
-.sticker-heart { left:260px; bottom:110px; font-size:34px; opacity:.35; transform:rotate(12deg); }
+.cat-sticker { position:fixed; z-index:0; pointer-events:none; user-select:none; filter:drop-shadow(2px 5px 3px rgba(63,73,67,.16)); opacity:.78; }
+.cat-art { width:170px; height:180px; background-size:300% 100%; background-repeat:no-repeat; }
+.sticker-cat { right:24px; bottom:14px; background-position:left center; transform:rotate(5deg); }
+.sticker-paw { right:25%; top:135px; width:115px; height:120px; background-position:center center; opacity:.2; transform:rotate(-8deg); }
+.sticker-heart { left:250px; bottom:96px; width:125px; height:135px; background-position:right center; opacity:.24; transform:rotate(9deg); }
+.brand-cat { background-size:300% 100%; background-position:left center; background-repeat:no-repeat; background-color:#fff !important; }
 .sidebar .brand-mark { position:relative; }
 .sidebar .brand-mark::after { content:'🐾'; position:absolute; right:-10px; top:-14px; font-size:24px; transform:rotate(18deg); }
 .session-row select { appearance:none; -webkit-appearance:none; pointer-events:none; }
+.row-actions button:nth-of-type(3) { display:none; }
 .accessory-panel { position:relative; overflow:hidden; }
 .accessory-panel::after { content:'🐾'; position:absolute; right:20px; top:12px; font-size:52px; opacity:.08; transform:rotate(15deg); }
 .accessory-intro { margin:-4px 0 18px; color:#6f7973; font-size:13px; line-height:1.7; }
