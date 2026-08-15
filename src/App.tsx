@@ -160,15 +160,17 @@ async function importWorkbook(file: File): Promise<Member[]> {
 
 function colorHex(color: string) { return ({ pink: 'F7DDE3', orange: 'FFC000', yellow: 'FFF200', green: '92D050', cyan: '10B8E8', blue: '4472C4' } as Record<string, string>)[color] ?? 'FFFFFF' }
 
-async function exportWorkbook(members: Member[], schedule: Schedule, ranked: Member[]) {
+function buildExportWorkbook(members: Member[], schedule: Schedule, ranked: Member[]) {
   const workbook = new ExcelJS.Workbook(); const sheet = workbook.addWorksheet('繁星本周要塞包分配')
   sheet.properties.defaultRowHeight = 20
   for (let col = 1; col <= 12; col += 1) sheet.getColumn(col).width = 14
   sheet.getColumn(13).width = 8; sheet.getColumn(14).width = 22; sheet.getColumn(15).width = 10; sheet.getColumn(16).width = 20
+  sheet.getColumn(17).width = 12; sheet.getColumn(18).width = 20; sheet.getColumn(19).width = 14; sheet.getColumn(20).width = 14; sheet.getColumn(21).width = 12
   const border = { top: { style: 'thin' as const, color: { argb: 'FF3F3F3F' } }, left: { style: 'thin' as const, color: { argb: 'FF3F3F3F' } }, bottom: { style: 'thin' as const, color: { argb: 'FF3F3F3F' } }, right: { style: 'thin' as const, color: { argb: 'FF3F3F3F' } } }
   const center = { vertical: 'middle' as const, horizontal: 'center' as const }
-  sheet.mergeCells('A1:P1'); sheet.getCell('A1').value = '繁星本周要塞包分配'; sheet.getCell('A1').font = { name: '宋体', size: 16, bold: true }; sheet.getCell('A1').alignment = center; sheet.getRow(1).height = 34
+  sheet.mergeCells('A1:U1'); sheet.getCell('A1').value = '繁星本周要塞包分配'; sheet.getCell('A1').font = { name: '宋体', size: 16, bold: true }; sheet.getCell('A1').alignment = center; sheet.getRow(1).height = 34
   const rankHeader = ['本周', '人员', '分数', '备注']; ['M2', 'N2', 'O2', 'P2'].forEach((cell, i) => { sheet.getCell(cell).value = rankHeader[i]; sheet.getCell(cell).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE7E6E6' } }; sheet.getCell(cell).font = { name: '宋体', size: 12 }; sheet.getCell(cell).alignment = center; sheet.getCell(cell).border = border })
+  const powerRankHeader = ['战力排名', '成员姓名', '上周战力', '本周战力', '提升']; ['Q2', 'R2', 'S2', 'T2', 'U2'].forEach((cell, i) => { sheet.getCell(cell).value = powerRankHeader[i]; sheet.getCell(cell).font = { name: '宋体', size: 12, bold: true }; sheet.getCell(cell).alignment = center; sheet.getCell(cell).border = border })
   const memberById = new Map(members.map((member) => [member.id, member]))
   SESSIONS.forEach((session) => {
     const start = session.startColumn; const end = start + 2; const headerRow = session.startRow; const dataStart = headerRow + 2
@@ -184,7 +186,13 @@ async function exportWorkbook(members: Member[], schedule: Schedule, ranked: Mem
   TIERS.forEach((tier, index) => { const row = 18 + index; sheet.mergeCells(row, 1, row, 3); sheet.mergeCells(row, 4, row, 9); sheet.mergeCells(row, 10, row, 12); sheet.getCell(row, 1).value = `考核${tier.min}-${tier.max}`; sheet.getCell(row, 4).value = `每周${tier.fire}火、${tier.middle}中`; sheet.getCell(row, 10).value = `每周${tier.coins}币`; [1, 4, 10].forEach((col) => { sheet.getCell(row, col).alignment = center; sheet.getCell(row, col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `FF${colorHex(tier.color)}` } }; sheet.getCell(row, col).border = border }) })
   sheet.mergeCells('A24:L24'); sheet.getCell('A24').value = '特殊情况：扣包/或特殊情况奖励包'; sheet.getCell('A24').alignment = center; sheet.getCell('A24').border = border
   ranked.slice(0, 30).forEach((member, index) => { const row = index + 3; const rankCell = sheet.getCell(row, 13); rankCell.value = index + 1; rankCell.alignment = center; rankCell.border = border; rankCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `FF${colorHex(tierForRank(index + 1).color)}` } }; [member.name, member.score ?? '', member.remark].forEach((value, i) => { const cell = sheet.getCell(row, 14 + i); cell.value = value; cell.alignment = center; cell.border = border; cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `FF${colorHex(tierForRank(index + 1).color)}` } } }) })
+  powerRankMembers(members).slice(0, 30).forEach((member, index) => { const row = index + 3; const previousPower = member.previousPower ?? Math.max((member.power || 0) - (member.weeklyPower || 0), 0); [index + 1, member.name, previousPower, member.power || 0, member.weeklyPower || 0].forEach((value, i) => { const cell = sheet.getCell(row, 17 + i); cell.value = value; cell.alignment = center; cell.border = border }) })
   sheet.mergeCells('A26:L26'); sheet.getCell('A26').value = '战力、考核分排名每周六晚统计，每周更新'; sheet.getCell('A26').alignment = center
+  return workbook
+}
+
+async function exportWorkbook(members: Member[], schedule: Schedule, ranked: Member[]) {
+  const workbook = buildExportWorkbook(members, schedule, ranked)
   const buffer = await workbook.xlsx.writeBuffer(); const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = '繁星本周要塞包分配.xlsx'; link.click(); URL.revokeObjectURL(url)
 }
 
@@ -316,7 +324,7 @@ export default function App() {
     <main className="content">
       <header className="topbar"><div><div className="eyebrow">FORTRESS DISTRIBUTION</div><h2>本周要塞包分配</h2></div><div className="toolbar"><button className="btn secondary" onClick={() => fileRef.current?.click()}>⇧ 导入 XLSX</button><input ref={fileRef} type="file" accept=".xlsx,.xls" hidden onChange={handleImport} /><button className="btn primary" onClick={() => exportWorkbook(members, schedule, ranked)}>⇩ 导出单表 XLSX</button></div></header>
       <section className="notice">{notice}<span className="notice-right"><label className="toggle"><input type="checkbox" checked={contest} onChange={(e) => setContest(e.target.checked)} /><span></span> 争霸周（最高 {scoreMax} 分）</label></span></section>
-      <section className="stats"><div className="stat-card"><span>成员人数</span><strong>{members.length}</strong><small>{members.length === 30 ? '模板完整' : '目标 30 人'}</small></div><div className="stat-card"><span>当前最高分</span><strong>{ranked[0]?.score ?? '—'}</strong><small>普通周 37 · 争霸周 57</small></div><div className="stat-card"><span>本周提升</span><strong>{weeklyPowerTotal}</strong><small>点击右侧“更新战力”</small></div><div className="stat-card"><span>火/中包总量</span><strong>40 / 80</strong><small>8 个时段完整分配</small></div></section>
+      <section className="stats"><div className="stat-card"><span>成员人数</span><strong>{members.length}</strong><small>{members.length === 30 ? '模板完整' : '目标 30 人'}</small></div><div className="stat-card"><span>当前最高分</span><strong>{ranked[0]?.score ?? '—'}</strong><small>普通周 37 · 争霸周 57</small></div><div className="stat-card"><span>本周提升</span><strong>{weeklyPowerTotal}w</strong><small>点击右侧“更新战力”</small></div><div className="stat-card"><span>火/中包总量</span><strong>40 / 80</strong><small>8 个时段完整分配</small></div></section>
       <section id="matrix" className="panel matrix-panel"><div className="panel-heading"><div><span className="eyebrow">AUTO LAYOUT</span><h3>彩色分包矩阵</h3></div><button className="btn ghost" onClick={() => setNotice('矩阵会根据当前考核分排名自动生成。')}>↻ 重新生成矩阵</button></div><div className="matrix-scroll"><div className="matrix-grid">{SESSIONS.map((session) => <SessionBlock key={session.id} session={session} schedule={schedule} ranked={ranked} members={members} />)}</div></div><div className="legend">{TIERS.map((tier) => <span key={tier.min}><i className={`swatch ${tier.color}`}></i>{tier.min}-{tier.max} 名</span>)}</div></section>
       <section id="members" className="panel split-panel">
         <span id="ranking" className="anchor-target"></span>
@@ -352,9 +360,9 @@ export default function App() {
                   <tr>
                     <th>战力排名</th>
                     <th>成员姓名</th>
-                    <th>上周战力</th>
-                    <th>本周战力</th>
-                    <th>提升</th>
+                    <th>上周战力（w）</th>
+                    <th>本周战力（w）</th>
+                    <th>提升（w）</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -368,9 +376,9 @@ export default function App() {
                       <tr key={member.id}>
                         <td><span className="rank-pill">{powerRank || '—'}</span></td>
                         <td><input value={member.name} onChange={(e) => updateMember(member.id, { name: e.target.value })} /></td>
-                        <td><input type="number" value={previousPower || ''} onChange={(e) => updateMember(member.id, { previousPower: e.target.value === '' ? 0 : Number(e.target.value) })} /></td>
-                        <td><input type="number" value={currentPower || ''} onChange={(e) => updateMember(member.id, { power: e.target.value === '' ? 0 : Number(e.target.value) })} /></td>
-                        <td><input type="number" value={growth || ''} onChange={(e) => updateMember(member.id, { weeklyPower: e.target.value === '' ? 0 : Number(e.target.value) })} /></td>
+                        <td><label className="power-input"><input type="number" value={previousPower || ''} onChange={(e) => updateMember(member.id, { previousPower: e.target.value === '' ? 0 : Number(e.target.value) })} /><span>w</span></label></td>
+                        <td><label className="power-input"><input type="number" value={currentPower || ''} onChange={(e) => updateMember(member.id, { power: e.target.value === '' ? 0 : Number(e.target.value) })} /><span>w</span></label></td>
+                        <td><label className="power-input"><input type="number" value={growth || ''} onChange={(e) => updateMember(member.id, { weeklyPower: e.target.value === '' ? 0 : Number(e.target.value) })} /><span>w</span></label></td>
                         <td><button className="icon-btn" title="删除成员" onClick={() => removeMember(member.id)}>×</button></td>
                       </tr>
                     )
@@ -378,9 +386,9 @@ export default function App() {
                   <tr className="summary-row">
                     <td>合计</td>
                     <td>全部成员</td>
-                    <td>{previousPowerTotal}</td>
-                    <td>{powerTotal}</td>
-                    <td>{weeklyPowerTotal}</td>
+                    <td>{previousPowerTotal}w</td>
+                    <td>{powerTotal}w</td>
+                    <td>{weeklyPowerTotal}w</td>
                     <td></td>
                   </tr>
                 </tbody>
