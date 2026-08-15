@@ -324,7 +324,7 @@ export default function App() {
     <main className="content">
       <header className="topbar"><div><div className="eyebrow">FORTRESS DISTRIBUTION</div><h2>本周要塞包分配</h2></div><div className="toolbar"><button className="btn secondary" onClick={() => fileRef.current?.click()}>⇧ 导入 XLSX</button><input ref={fileRef} type="file" accept=".xlsx,.xls" hidden onChange={handleImport} /><button className="btn primary" onClick={() => exportWorkbook(members, schedule, ranked)}>⇩ 导出单表 XLSX</button></div></header>
       <section className="notice">{notice}<span className="notice-right"><label className="toggle"><input type="checkbox" checked={contest} onChange={(e) => setContest(e.target.checked)} /><span></span> 争霸周（最高 {scoreMax} 分）</label></span></section>
-      <section className="stats"><div className="stat-card"><span>成员人数</span><strong>{members.length}</strong><small>{members.length === 30 ? '模板完整' : '目标 30 人'}</small></div><div className="stat-card"><span>当前最高分</span><strong>{ranked[0]?.score ?? '—'}</strong><small>普通周 37 · 争霸周 57</small></div><div className="stat-card"><span>本周提升</span><strong>{weeklyPowerTotal}w</strong><small>点击右侧“更新战力”</small></div><div className="stat-card"><span>火/中包总量</span><strong>40 / 80</strong><small>8 个时段完整分配</small></div></section>
+      <section className="stats"><div className="stat-card"><span>成员人数</span><strong>{members.length}</strong><small>{members.length === 30 ? '模板完整' : '目标 30 人'}</small></div><div className="stat-card"><span>当前最高分</span><strong>{ranked[0]?.score ?? '—'}</strong><small>普通周 37 · 争霸周 57</small></div><div className="stat-card"><span>本周提升</span><strong>{weeklyPowerTotal}</strong><small>点击右侧“更新战力”</small></div><div className="stat-card"><span>火/中包总量</span><strong>40 / 80</strong><small>8 个时段完整分配</small></div></section>
       <section id="matrix" className="panel matrix-panel"><div className="panel-heading"><div><span className="eyebrow">AUTO LAYOUT</span><h3>彩色分包矩阵</h3></div><button className="btn ghost" onClick={() => setNotice('矩阵会根据当前考核分排名自动生成。')}>↻ 重新生成矩阵</button></div><div className="matrix-scroll"><div className="matrix-grid">{SESSIONS.map((session) => <SessionBlock key={session.id} session={session} schedule={schedule} ranked={ranked} members={members} />)}</div></div><div className="legend">{TIERS.map((tier) => <span key={tier.min}><i className={`swatch ${tier.color}`}></i>{tier.min}-{tier.max} 名</span>)}</div></section>
       <section id="members" className="panel split-panel">
         <span id="ranking" className="anchor-target"></span>
@@ -376,9 +376,9 @@ export default function App() {
                       <tr key={member.id}>
                         <td><span className="rank-pill">{powerRank || '—'}</span></td>
                         <td><input value={member.name} onChange={(e) => updateMember(member.id, { name: e.target.value })} /></td>
-                        <td><label className="power-input"><input type="number" value={previousPower || ''} onChange={(e) => updateMember(member.id, { previousPower: e.target.value === '' ? 0 : Number(e.target.value) })} /><span>w</span></label></td>
-                        <td><label className="power-input"><input type="number" value={currentPower || ''} onChange={(e) => updateMember(member.id, { power: e.target.value === '' ? 0 : Number(e.target.value) })} /><span>w</span></label></td>
-                        <td><label className="power-input"><input type="number" value={growth || ''} onChange={(e) => updateMember(member.id, { weeklyPower: e.target.value === '' ? 0 : Number(e.target.value) })} /><span>w</span></label></td>
+                        <td><input type="number" value={previousPower || ''} onChange={(e) => updateMember(member.id, { previousPower: e.target.value === '' ? 0 : Number(e.target.value) })} /></td>
+                        <td><input type="number" value={currentPower || ''} onChange={(e) => updateMember(member.id, { power: e.target.value === '' ? 0 : Number(e.target.value) })} /></td>
+                        <td><input type="number" value={growth || ''} onChange={(e) => updateMember(member.id, { weeklyPower: e.target.value === '' ? 0 : Number(e.target.value) })} /></td>
                         <td><button className="icon-btn" title="删除成员" onClick={() => removeMember(member.id)}>×</button></td>
                       </tr>
                     )
@@ -386,9 +386,9 @@ export default function App() {
                   <tr className="summary-row">
                     <td>合计</td>
                     <td>全部成员</td>
-                    <td>{previousPowerTotal}w</td>
-                    <td>{powerTotal}w</td>
-                    <td>{weeklyPowerTotal}w</td>
+                    <td>{previousPowerTotal}</td>
+                    <td>{powerTotal}</td>
+                    <td>{weeklyPowerTotal}</td>
                     <td></td>
                   </tr>
                 </tbody>
